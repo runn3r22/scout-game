@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(mkdir -p ~/.claude/skills/openclaw-engineer)",
+      "Bash(cp -r /c/builder/fair/scout-game/agent/openclaw-engineer/* ~/.claude/skills/openclaw-engineer/)",
+      "Bash(grep -E \"\\\\.\\(json|md\\)$\")",
+      "Bash(find . -type f ! -path \"./.git/*\" -exec wc -c {} +)"
+    ]
+  }
+}

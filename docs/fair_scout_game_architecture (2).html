@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fair — Scout Game Architecture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0f1117;
+  --bg-secondary: #161822;
+  --bg-card: #1c1e2e;
+  --bg-sidebar: #0c0d14;
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent: #8b5cf6;
+  --accent-dim: rgba(139, 92, 246, 0.15);
+  --border: #27293d;
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  display: flex;
+  min-height: 100vh;
+}
+.sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  z-index: 100;
+}
+.sidebar-logo { padding: 0 24px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.sidebar-logo h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.sidebar-logo h1 span { color: var(--accent); }
+.sidebar-logo p { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+.sidebar-section { padding: 12px 24px 4px; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+.sidebar a {
+  display: block; padding: 6px 24px; color: var(--text-secondary); text-decoration: none;
+  font-size: 13px; font-weight: 400; transition: all 0.15s; border-left: 2px solid transparent;
+}
+.sidebar a:hover { color: var(--text-primary); background: var(--accent-dim); border-left-color: var(--accent); }
+.sidebar a.active { color: var(--accent); border-left-color: var(--accent); }
+.main { margin-left: 260px; flex: 1; max-width: 900px; padding: 48px 64px 120px; }
+h1.page-title { font-size: 48px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 16px; }
+h1.page-title span { color: var(--accent); }
+.subtitle { display: inline-block; background: var(--accent-dim); border: 1px solid var(--accent); padding: 6px 16px; font-size: 14px; font-weight: 500; margin-bottom: 48px; }
+h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; margin: 64px 0 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+h2 .num { color: var(--text-muted); font-weight: 400; margin-right: 8px; }
+h3 { font-size: 20px; font-weight: 600; margin: 36px 0 12px; }
+h4 { font-size: 16px; font-weight: 600; margin: 24px 0 8px; color: var(--text-secondary); }
+p { margin-bottom: 16px; color: var(--text-secondary); }
+strong { color: var(--text-primary); font-weight: 600; }
+.exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0 32px; }
+.exec-card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
+.exec-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 8px; }
+.exec-card .value { font-size: 24px; font-weight: 700; }
+.exec-card .value.accent { color: var(--accent); }
+.exec-card .value.green { color: var(--green); }
+.exec-card .value.amber { color: var(--amber); }
+.exec-card .detail { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+.stat-row { display: flex; gap: 32px; margin: 24px 0; padding: 20px 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+.stat-item { flex: 1; text-align: center; }
+.stat-item .sv { font-size: 28px; font-weight: 700; color: var(--accent); }
+.stat-item .sl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 13.5px; }
+th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+tr:hover td { background: rgba(139, 92, 246, 0.03); }
+pre { background: var(--bg-card); border: 1px solid var(--border); padding: 16px 20px; border-radius: 6px; overflow-x: auto; margin: 16px 0 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--bg-card); padding: 2px 6px; border-radius: 3px; color: var(--accent); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-dim); padding: 16px 20px; margin: 16px 0 24px; border-radius: 0 6px 6px 0; }
+.callout.warn { border-left-color: var(--amber); background: rgba(245, 158, 11, 0.08); }
+.callout.critical { border-left-color: var(--red); background: rgba(239, 68, 68, 0.08); }
+.callout p { margin-bottom: 4px; }
+.callout p:last-child { margin-bottom: 0; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.tag.purple { background: var(--accent-dim); color: var(--accent); }
+.tag.green { background: rgba(34, 197, 94, 0.12); color: var(--green); }
+.tag.amber { background: rgba(245, 158, 11, 0.12); color: var(--amber); }
+.tag.red { background: rgba(239, 68, 68, 0.12); color: var(--red); }
+.tag.blue { background: rgba(59, 130, 246, 0.12); color: var(--blue); }
+.flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.flow-step { background: var(--bg-card); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; color: var(--text-secondary); }
+.flow-arrow { color: var(--accent); font-weight: 700; }
+.divider { height: 1px; background: var(--border); margin: 64px 0; }
+ul, ol { margin: 8px 0 16px 24px; color: var(--text-secondary); }
+li { margin-bottom: 6px; }
+.checklist { list-style: none; margin-left: 0; }
+.checklist li { padding-left: 24px; position: relative; }
+.checklist li::before { content: '☐'; position: absolute; left: 0; color: var(--text-muted); }
+.rh { color: var(--red); font-weight: 600; }
+.rm { color: var(--amber); font-weight: 600; }
+.rl { color: var(--green); font-weight: 600; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+html { scroll-behavior: smooth; }
+section { scroll-margin-top: 32px; }
+.mermaid { margin: 24px 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; overflow-x: auto; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Fair<span>.</span></h1>
+    <p>Scout Game Architecture</p>
+  </div>
+  <div class="sidebar-section">Overview</div>
+  <a href="#exec">Executive Summary</a>
+  <div class="sidebar-section">Architecture</div>
+  <a href="#s1">Agent Integration</a>
+  <a href="#s1b">Evaluation Pipeline</a>
+  <a href="#s2">Tech Stack & Costs</a>
+  <div class="sidebar-section">Strategy</div>
+  <a href="#s3">Outcomes & KPIs</a>
+  <a href="#s3b">Measurement Framework</a>
+  <a href="#s4">Governance & Retention</a>
+  <a href="#s5">GTM Plan</a>
+  <div class="sidebar-section">Systems</div>
+  <a href="#s6">Internal Tracking</a>
+  <div class="sidebar-section">Economics</div>
+  <a href="#econ">Token Economics</a>
+  <a href="#econ-test">Test Season Model</a>
+  <a href="#econ-public">Public Season Model</a>
+  <a href="#econ-price">Price Impact</a>
+  <a href="#econ-leaderboard">Weekly Leaderboard</a>
+  <a href="#econ-retention">Hold vs Sell</a>
+  <a href="#econ-scenarios">Bear / Normal / Bull</a>
+  <div class="sidebar-section">Reference</div>
+  <a href="#risks">Risk Matrix</a>
+  <a href="#parked">Parked Items</a>
+</nav>
+
+<main class="main">
+
+<!-- ============================================================ -->
+<!-- EXECUTIVE SUMMARY -->
+<!-- ============================================================ -->
+<section id="exec">
+<h1 class="page-title">Scout Game<span>.</span></h1>
+<div class="subtitle">Gamified alpha sourcing for the Fair autonomous fund</div>
+
+<p>Scouts tag <code>@fairvc</code> on X with token alpha. Fair's AI agent evaluates, scores, and acts — saving to DB, publishing signals, or executing trades. Scouts earn $FAIR rewards through a proportional points system. Better signals, bigger rewards. Hold tokens, climb tiers, earn more.</p>
+
+<p>The scout game turns Fair's community into a distributed research team. Human pattern recognition + AI evaluation + on-chain execution.</p>
+
+<div class="exec-grid">
+  <div class="exec-card">
+    <div class="label">The Idea</div>
+    <div class="value" style="font-size:16px; line-height:1.5">Scouts find alpha → tag @fairvc → agent evaluates → rewards in $FAIR</div>
+  </div>
+  <div class="exec-card">
+    <div class="label">Primary Goal</div>
+    <div class="value" style="font-size:16px">Better token sourcing</div>
+    <div class="detail">Humans find what algorithms miss</div>
+  </div>
+  <div class="exec-card">
+    <div class="label">Test Phase</div>
+    <div class="value accent">1 week · 10 GPs</div>
+    <div class="detail">1% supply pool · flat rewards · ASAP launch</div>
+  </div>
+  <div class="exec-card">
+    <div class="label">Public Phase</div>
+    <div class="value accent">2 weeks · 4 tiers</div>
+    <div class="detail">T1: 2M · T2: 10M · T3: 50M · GP: 250M $FAIR</div>
+  </div>
+</div>
+
+<h3>Costs at a Glance</h3>
+<div class="exec-grid">
+  <div class="exec-card">
+    <div class="label">GP Test (10 scouts)</div>
+    <div class="value green">~$200/mo</div>
+    <div class="detail">X API Basic · ~$2 AI costs · existing infra</div>
+  </div>
+  <div class="exec-card">
+    <div class="label">Public S1 (50 scouts)</div>
+    <div class="value green">~$400/mo</div>
+    <div class="detail">X API + Privy auth + AI evaluation</div>
+  </div>
+  <div class="exec-card">
+    <div class="label">Growth (200 scouts)</div>
+    <div class="value amber">~$700/mo</div>
+    <div class="detail">X API dominates · AI still cheap</div>
+  </div>
+  <div class="exec-card">
+    <div class="label">Scale (500+ scouts)</div>
+    <div class="value amber">~$6K/mo</div>
+    <div class="detail">X API Pro ($5K) = 83% of total</div>
+  </div>
+</div>
+
+<h3>Dev Effort</h3>
+<div class="stat-row">
+  <div class="stat-item"><div class="sv">~35h</div><div class="sl">GP Test Launch</div></div>
+  <div class="stat-item"><div class="sv">~40h</div><div class="sl">Public (additional)</div></div>
+  <div class="stat-item"><div class="sv">~75h</div><div class="sl">Full System</div></div>
+</div>
+
+<h3>Key Risks</h3>
+<table>
+  <tr><th>Risk</th><th>Level</th><th>Mitigation</th></tr>
+  <tr><td>Evaluation pipeline quality</td><td><span class="rh">Critical</span></td><td>Dedicated design required — Section 1b</td></tr>
+  <tr><td>X API price instability</td><td><span class="rh">High</span></td><td>Abstract API layer for swaps</td></tr>
+  <tr><td>Scout fatigue / churn</td><td><span class="rh">High</span></td><td>Gamification + tier progression + seasons</td></tr>
+  <tr><td>Scouts trigger X spam detection</td><td><span class="rm">Medium</span></td><td>Rate limits + submission guidelines</td></tr>
+  <tr><td>Sybil attacks (public)</td><td><span class="rm">Medium</span></td><td>Token threshold + economic modeling</td></tr>
+  <tr><td>Legal (P&L-linked rewards)</td><td><span class="rm">Parked</span></td><td>Legal review before scaling</td></tr>
+</table>
+
+<h3>What Success Looks Like</h3>
+<p><strong>After test:</strong> ≥6 GPs actively submitting, ≥3 signals published, at least 1 project the pipeline would have missed.</p>
+<p><strong>After S1:</strong> 30+ active scouts, @fairvc becoming a default CT tag, scout-sourced trades with ≥40% win rate, net positive buy pressure.</p>
+<p><strong>The dream:</strong> Someone posts alpha on CT → replies fill with "tag @fairvc" → because everyone knows Fair acts on good signals.</p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 1: AGENT INTEGRATION (FULL) -->
+<!-- ============================================================ -->
+<section id="s1">
+<h2><span class="num">1 —</span> Agent Integration</h2>
+
+<h3>MVP Flow</h3>
+<div class="mermaid">
+flowchart TD
+    subgraph ENTRY["🔑 ENTRY"]
+        A["User holds $FAIR tokens\n(min 2M, test: 250M+ GP only)"]
+        A --> B["Token holdings = signal weight + reward multiplier"]
+    end
+    subgraph SUBMIT["📡 SUBMISSION"]
+        B --> C{"User tags @fairvc\non Twitter/X"}
+        C --> D["Option A:\nTag a tweet with alpha\n(someone else's post)"]
+        C --> E["Option B:\nWrite own alpha post\nand tag @fairvc"]
+    end
+    subgraph SCORING["⚖️ WEIGHT CALCULATION"]
+        D --> F["Submission Weight"]
+        E --> F
+        F --> G["Token Holdings\nMultiplier"]
+        F --> H["Social Scoring\n(post-MVP)"]
+        F --> I["Earlyness Bonus\n(post-MVP)"]
+        F --> II["PNL Track Record\n(post-MVP)"]
+        G --> J["Final Weighted Score"]
+        H --> J
+        I --> J
+        II --> J
+    end
+    subgraph PIPELINE["🤖 AGENT PIPELINE"]
+        J --> K{"Agent evaluates\nConfidence Score"}
+        K -->|"Low confidence"| L["❌ Rejected\nNo reward"]
+        K -->|"Confidence < 60%"| M["💾 Saved to DB\nas project intel"]
+        K -->|"Confidence 60-80%"| N["📢 Signal Published\nto feed"]
+        K -->|"Confidence 80%+"| O["💰 Trade\nExecuted"]
+    end
+    subgraph REWARDS["🎁 REWARDS ($FAIR)"]
+        M --> P["1 base point"]
+        N --> Q["5 base points"]
+        O --> T["20 base points"]
+    end
+    subgraph FLYWHEEL["🔄 FLYWHEEL"]
+        P --> U["Scout earns $FAIR"]
+        Q --> U
+        T --> U
+        U --> V{"Scout decision"}
+        V -->|"Hold"| W["Higher tier\n→ better multiplier\n→ more rewards"]
+        V -->|"Sell"| X["Stay same tier\n→ same rewards"]
+        W --> Y["More quality scouting\n→ better signals\n→ token value up"]
+        Y --> Z["New scouts buy $FAIR\n→ buy pressure\n> sell pressure"]
+    end
+    style ENTRY fill:#1a1a2e,stroke:#8b5cf6,color:#fff
+    style SUBMIT fill:#1a1a2e,stroke:#3b82f6,color:#fff
+    style SCORING fill:#1a1a2e,stroke:#8b5cf6,color:#fff
+    style PIPELINE fill:#1a1a2e,stroke:#ef4444,color:#fff
+    style REWARDS fill:#1a1a2e,stroke:#3b82f6,color:#fff
+    style FLYWHEEL fill:#1a1a2e,stroke:#8b5cf6,color:#fff
+</div>
+
+<h3>1.1 How Scout Submissions Enter the Pipeline</h3>
+
+<h4>Current State (without Scout Game)</h4>
+<pre>
+Farcaster casts (5K users) → GPT-5 scoring → LangGraph orchestrator → Supabase
+                              ├─ Project Discovery Agent
+                              ├─ Intelligence Extraction Agent
+                              ├─ Investment Analyst Agent v3
+                              └─ Communication Agent
+</pre>
+
+<h4>With Scout Game</h4>
+<pre>
+INPUT LAYER
+├─ Farcaster pipeline (existing, automated, 2x daily)
+├─ X/Twitter scout submissions (new, event-driven, real-time)
+└─ [Future: other platforms]
+        │
+        ▼
+SHARED DATABASE (Supabase)
+├─ projects (3,090+ canonical entries)
+├─ agent_memory (2,700+ intelligence entries)
+├─ research_assessments
+└─ [NEW] scout_submissions (scout-specific tracking)
+        │
+        ▼
+EVALUATION → AGENT ACTIONS
+</pre>
+
+<h4>Data Flow: Submission → Evaluation → Action</h4>
+<pre>
+Scout tags @fairvc on X
+        │
+        ▼
+[1] INTAKE
+    - Parse tweet: extract token/project mention, scout's commentary
+    - Identify scout: wallet → tier → signal weight
+    - Check: is this project already in `projects` table?
+        ├─ YES → is this new information not in `agent_memory`?
+        │         ├─ YES → proceed to evaluation
+        │         └─ NO → reject (duplicate info, no reward)
+        └─ NO → new project discovery → proceed to evaluation
+        │
+        ▼
+[2] EVALUATION
+    - Agent assesses using PLAYBOOK frameworks + entry checklist
+    - Cross-references: on-chain data, holders, volume, team
+    - Signal weight affects attention priority, NOT evaluation outcome
+    - Confidence score assigned
+        │
+        ▼
+[3] ACTION (based on confidence)
+    ├─ LOW → Rejected. No DB entry. No reward.
+    ├─ <60% → DB save. New project → `projects`. New intel → `agent_memory`
+    ├─ 60-80% → Signal Published. Push notification to team. 5-min override.
+    └─ 80%+ → Trade Considered. Push to team. Auto-execute if no veto.
+        │
+        ▼
+[4] RECORDING
+    - Logged to `scout_submissions`
+    - Points: base × tier multiplier → daily pool + weekly leaderboard
+    - Multiple scouts on same project: ALL rewarded for signal/trade
+</pre>
+
+<h3>1.2 Key Design Decisions</h3>
+
+<p><strong>Same database.</strong> Scout submissions hit the same <code>projects</code> and <code>agent_memory</code> tables as the autonomous pipeline. Duplicate info = rejected.</p>
+
+<p><strong>Same evaluation frameworks.</strong> PLAYBOOK (Metagame Theory, Attention Theory, Probabilistic Thinking, entry checklist) applies equally to scout and pipeline signals.</p>
+
+<p><strong>Signal weight ≠ evaluation bias.</strong> GP's submission gets processed sooner, but confidence score comes from fundamentals, not scout's tier. T1 scout with genuine 80%+ project = same trade outcome as GP.</p>
+
+<h3>1.3 How Scouts Improve the Agent</h3>
+
+<p><strong>Coverage expansion:</strong> Scouts on X extend the agent's reach — different sources, networks, pattern recognition.</p>
+
+<p><strong>Human intuition:</strong> "This dev's wallet did something weird," "this team built X before," "this narrative is about to rotate" — hard to encode algorithmically.</p>
+
+<p><strong>Database enrichment:</strong> Even rejected submissions create signal/noise profiles, helping tune pipeline scoring over time.</p>
+
+<h4>Feedback Mechanisms</h4>
+<p><strong>Track record per scout (post-MVP):</strong> Each scout builds history in <code>scout_submissions</code>. Scout A: 40 subs, 12 accepted, 3 profitable trades → high-signal. Scout B: 60 subs, 5 accepted, 0 trades → noise.</p>
+
+<p><strong>Agent performance tracking:</strong> When agent trades on scout signal, P&L is tracked. Can't tie to individual rewards (parked — legal), but CAN: display aggregate stats ("Scout-sourced trades: X% win rate"), recognize top scouts ("Scout of the Week"), evaluate channel value vs pipeline.</p>
+
+<h3>1.4 Autonomy Model</h3>
+
+<table>
+  <tr><th>Action</th><th>Agent Behavior</th></tr>
+  <tr><td>DB saves</td><td>Fully autonomous. No notification.</td></tr>
+  <tr><td>Signal publish</td><td>Push to team → 5-min override window → auto-publish if no veto.</td></tr>
+  <tr><td>Trade execution</td><td>Push to team → 5-min override window → auto-execute if no veto.</td></tr>
+</table>
+<p>The push is a safety net, not an approval gate. Team can intervene only if clearly wrong.</p>
+
+<h3>1.5 The "Paid Evaluation" Feature</h3>
+
+<p>A holder of token X buys $FAIR → becomes scout → submits token X. <strong>This is intentional and valuable:</strong></p>
+<ul>
+  <li>Creates direct buy pressure on $FAIR from external communities</li>
+  <li>Agent evaluates objectively — buying $FAIR buys ACCESS, not a positive signal</li>
+  <li>If project is good, Fair benefits from discovering it. If bad, rejected.</li>
+  <li>Coordinated push (multiple scouts, same token, short window) → confidence DECREASES</li>
+</ul>
+<p><strong>Positioning:</strong> "Want Fair's AI to evaluate your project? Hold $FAIR and submit it."</p>
+
+<h3>1.6 AI Agents as Scouts</h3>
+<div class="callout">
+  <p><strong>Flagged for future.</strong> Allow other AI agents to participate — 24/7 monitoring, "AI hiring AI" narrative. But: trivially cheap to sybil, high spam risk, potential keyword stuffing. Recommend: separate "Agent Scout" tier (50M+ minimum), separate rate limits, identity verification. Don't build for MVP.</p>
+</div>
+
+<h3>1.7 Open Questions</h3>
+<table>
+  <tr><th>#</th><th>Question</th><th>Suggested Resolution</th></tr>
+  <tr><td>1</td><td>Evaluation through Research Agent or dedicated module?</td><td>Start with Research Agent. Spin out if volume exceeds capacity.</td></tr>
+  <tr><td>2</td><td>Confidence thresholds (&lt;60% / 60-80% / 80%+)?</td><td>Test phase calibrates. Target 20-30% acceptance rate.</td></tr>
+  <tr><td>3</td><td>Evaluation speed? Real-time or batched?</td><td>Hybrid: instant "received," result within 1 hour (batched every 30-60 min).</td></tr>
+  <tr><td>4</td><td>Scout submits project pipeline already found?</td><td>No new info = rejected. New intel = DB save reward.</td></tr>
+  <tr><td>5</td><td>Same-project submission by pipeline + scout?</td><td>Tag as <code>source: both</code>. Scout rewarded if adds new info.</td></tr>
+  <tr><td>6</td><td>Team asleep during override window?</td><td>Accept risk. PLAYBOOK + rug detection = safety net, not human availability.</td></tr>
+</table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 1B: EVALUATION PIPELINE -->
+<!-- ============================================================ -->
+<section id="s1b">
+<h2><span class="num">1b —</span> Evaluation Pipeline</h2>
+
+<div class="callout critical">
+  <p><strong>⚠️ REQUIRES DEDICATED DESIGN</strong></p>
+  <p>The evaluation pipeline is the core of the scout game. If the agent evaluates poorly — missing good signals or acting on bad ones — everything else is wasted. This needs its own dedicated design process, not just "use PLAYBOOK."</p>
+</div>
+
+<h3>What Needs to Be Designed</h3>
+
+<h4>1. Scout-Specific Evaluation Criteria</h4>
+<p>The existing PLAYBOOK was designed for autonomous pipeline signals (structured Farcaster casts scored by GPT-5). Scout submissions are different — tweets are short, unstructured, slang-heavy. The evaluation must handle:</p>
+<ul>
+  <li>Extracting actionable signal from informal tweet content</li>
+  <li>Parsing token/project references from natural language ("this dev is cooking," "check the chart")</li>
+  <li>Weighting scout's own analysis vs just a link drop</li>
+  <li>Handling multi-token or multi-project tweets</li>
+</ul>
+
+<h4>2. Quality Assessment Logic</h4>
+<p>How does the agent distinguish:</p>
+<ul>
+  <li>Genuine alpha (found something real and early) vs publicly known information</li>
+  <li>Keyword stuffing (triggers high confidence without substance)</li>
+  <li>Bag pushing (valid via paid evaluation, but agent must be objective)</li>
+  <li>Post-run submissions (less valuable than pre-run)</li>
+</ul>
+
+<h4>3. Real-Time Cross-Reference</h4>
+<p>For each submission, cross-reference:</p>
+<ul>
+  <li><strong>On-chain:</strong> holder distribution, liquidity depth, deployer history, contract verification</li>
+  <li><strong>Social:</strong> who else is talking, engagement authenticity</li>
+  <li><strong>Timing:</strong> before or after price run?</li>
+  <li><strong>Existing DB:</strong> does Fair already track this project?</li>
+</ul>
+
+<h4>4. Anti-Gaming</h4>
+<p>Once scouts understand confidence triggers, they'll optimize. Resist:</p>
+<ul>
+  <li>Keyword stuffing (all the right terms, no substance)</li>
+  <li>Fake social proof (bought engagement on tagged tweet)</li>
+  <li>Coordinated push (many scouts, same token, short window → reduce, not boost confidence)</li>
+  <li>Adversarial text designed to manipulate scoring</li>
+</ul>
+
+<h4>5. Learning Loop</h4>
+<ul>
+  <li>Which scout signal types lead to profitable trades?</li>
+  <li>Which scouts consistently produce high-quality vs noise?</li>
+  <li>What submission patterns predict success?</li>
+  <li>How to weight scout reputation in future evaluations (post-MVP)</li>
+</ul>
+
+<h4>6. Confidence Calibration</h4>
+<p>Thresholds directly impact economics (lower bar = more rewards), signal quality (higher bar = fewer but better), and scout motivation (too strict = frustration). Start conservative (high bar), tune down if acceptance too low.</p>
+
+<div class="callout warn">
+  <p><strong>Next step:</strong> Dedicated design session before GP test. Define evaluation prompt, test with example tweets, red-team with adversarial submissions, set initial thresholds. <strong>This is the single most important technical workstream.</strong></p>
+</div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: TECH STACK & COSTS (FULL) -->
+<!-- ============================================================ -->
+<section id="s2">
+<h2><span class="num">2 —</span> Tech Stack & Costs</h2>
+
+<h3>Architecture</h3>
+<pre>
+┌──────────────────────────────────────────────────────────┐
+│                    SCOUT FRONTEND                         │
+│             (Next.js on Vercel — Terminal Dashboard)       │
+│    Dashboard · Leaderboard · Profile · Claim Interface    │
+└─────────────────────┬────────────────────────────────────┘
+                      │
+                 Privy Auth (X login + wallet connect)
+                      │
+┌─────────────────────┴────────────────────────────────────┐
+│                   BACKEND SERVICES                        │
+│                                                           │
+│  ┌─────────────┐   ┌──────────────┐   ┌──────────────┐  │
+│  │  X API Layer │   │  Evaluation  │   │   Rewards    │  │
+│  │  (official)  │   │   Engine     │   │   Engine     │  │
+│  │              │   │  (Claude)    │   │  (points)    │  │
+│  └──────┬──────┘   └──────┬──────┘   └──────┬───────┘  │
+│         └──────────────────┴─────────────────┘           │
+│                            │                              │
+│                    ┌───────┴───────┐                      │
+│                    │   Supabase    │                      │
+│                    │  (existing +  │                      │
+│                    │  scout tables)│                      │
+│                    └───────────────┘                      │
+└──────────────────────────────────────────────────────────┘
+                      │
+               ┌──────┴──────┐
+               │   Hedgey    │
+               │  contracts  │
+               │  (Base L2)  │
+               └─────────────┘
+</pre>
+
+<h3>2.1 Authentication: Privy</h3>
+
+<p>Privy handles X login + wallet connect in single flow. Already in the Fair ecosystem (OpenClaw). Acquired by Stripe (June 2025).</p>
+
+<table>
+  <tr><th>Tier</th><th>Cost</th><th>MAU Limit</th><th>Scout Game Phase</th></tr>
+  <tr><td>Developer (Free)</td><td>$0</td><td>0-499</td><td>GP test (10 users)</td></tr>
+  <tr><td>Core</td><td>$299/mo</td><td>500-2,499</td><td>Public S1 (50-200 scouts)</td></tr>
+  <tr><td>Scale</td><td>$499/mo</td><td>2,500-9,999</td><td>Growth phase</td></tr>
+  <tr><td>Enterprise</td><td>Custom</td><td>10K+</td><td>As low as $0.001/signature</td></tr>
+</table>
+
+<h4>Alternatives Evaluated</h4>
+<table>
+  <tr><th>Provider</th><th>Pricing</th><th>Pros</th><th>Cons</th><th>Verdict</th></tr>
+  <tr><td><strong>Openfort</strong></td><td>Usage-based, free to 1K MAU</td><td>Open-source, native smart accounts, sub-100ms, no lock-in</td><td>Smaller ecosystem</td><td>Best alternative if Privy lock-in concerns grow</td></tr>
+  <tr><td><strong>Turnkey</strong></td><td>$0.10/sig, Pro to $0.01</td><td>Fastest TEE signing (50-100ms), ex-Coinbase Custody</td><td>Low-level, no social login OOB</td><td>Good for agent wallets, overkill for scout auth</td></tr>
+  <tr><td><strong>Dynamic</strong></td><td>$200/mo for 2.5K MAU</td><td>Beautiful UI, 500+ wallets</td><td>Acquired by Fireblocks — enterprise pivot</td><td>Pass</td></tr>
+  <tr><td><strong>Thirdweb</strong></td><td>Free + usage</td><td>All-in-one (wallets + contracts + SDKs)</td><td>More opinionated stack</td><td>Consider if also using contract infra</td></tr>
+</table>
+
+<p><strong>Recommendation:</strong> Start with Privy (free → Core). Openfort as migration path if needed. Re-evaluate at 6 months.</p>
+
+<h3>2.2 X API (Official Only)</h3>
+
+<table>
+  <tr><th>Tier</th><th>Cost/mo</th><th>Read Limit</th><th>Write</th><th>Search</th></tr>
+  <tr><td>Free</td><td>$0</td><td>~1 req/15min</td><td>500 posts/mo</td><td>None</td></tr>
+  <tr><td>Basic</td><td>$200</td><td>15,000 tweets/mo</td><td>50,000 posts/mo</td><td>7-day window</td></tr>
+  <tr><td>Pro</td><td>$5,000</td><td>1M tweets/mo</td><td>300,000 posts/mo</td><td>Full archive</td></tr>
+  <tr><td>Enterprise</td><td>$42,000+</td><td>Custom</td><td>Custom</td><td>Full archive</td></tr>
+</table>
+
+<p><strong>New (Feb 2026):</strong> Pay-as-you-go pricing alongside fixed tiers. Per-operation costs. $500 voucher for beta. Auto top-up + spending caps.</p>
+
+<h4>Usage Model by Scout Count</h4>
+<p>Per scout per day: ~1-3 submissions = ~3 API calls each (mention + content + profile). Acceptance rate ~25%.</p>
+
+<table>
+  <tr><th>Scouts</th><th>API calls/month</th><th>Best Tier</th><th>Monthly Cost</th></tr>
+  <tr><td>10 (GP test)</td><td>900-2,700</td><td>Basic</td><td><strong>$200</strong></td></tr>
+  <tr><td>50</td><td>4,500-13,500</td><td>Basic</td><td><strong>$200</strong></td></tr>
+  <tr><td>100</td><td>9,000-27,000</td><td>Basic (tight) / PAYG</td><td><strong>$200-400</strong></td></tr>
+  <tr><td>200</td><td>18,000-54,000</td><td>Pro or PAYG</td><td><strong>$500-5,000</strong></td></tr>
+  <tr><td>500</td><td>45,000-135,000</td><td>Pro</td><td><strong>$5,000</strong></td></tr>
+  <tr><td>1,000</td><td>90,000-270,000</td><td>Pro</td><td><strong>$5,000</strong></td></tr>
+</table>
+
+<div class="callout warn">
+  <p><strong>X API is the dominant cost at every stage (68-83%).</strong> Abstract the API layer in code. Monitor pay-as-you-go beta. X has changed pricing 4+ times since 2023 — build with fallback in mind. Grok (<code>grok-search</code> skill, already integrated) as supplementary data source.</p>
+</div>
+
+<h3>2.3 AI Evaluation Costs</h3>
+
+<p><strong>Model:</strong> Claude Sonnet 4.5 — $3 input / $15 output per million tokens. With prompt caching: 90% savings on cached context (PLAYBOOK, system prompt).</p>
+
+<h4>Cost Per Evaluation Type</h4>
+<table>
+  <tr><th>Result</th><th>Input Tokens</th><th>Output Tokens</th><th>Cost (cached)</th><th>% of Submissions</th></tr>
+  <tr><td>Quick reject</td><td>~5,500</td><td>~200</td><td><strong>~$0.004</strong></td><td>70-80%</td></tr>
+  <tr><td>DB save</td><td>~5,500</td><td>~800</td><td><strong>~$0.013</strong></td><td>15-20%</td></tr>
+  <tr><td>Signal publish</td><td>~5,500</td><td>~1,500</td><td><strong>~$0.024</strong></td><td>3-5%</td></tr>
+  <tr><td>Trade memo</td><td>~7,500</td><td>~4,000</td><td><strong>~$0.065</strong></td><td>1-3%</td></tr>
+</table>
+<p>Weighted average: <strong>~$0.008 per submission</strong></p>
+
+<h4>Monthly AI Cost by Scout Count</h4>
+<table>
+  <tr><th>Scouts</th><th>Submissions/mo</th><th>AI Cost/mo</th></tr>
+  <tr><td>10 (GP test)</td><td>140-280</td><td><strong>$1-2</strong></td></tr>
+  <tr><td>50</td><td>2K-5.6K</td><td><strong>$17-45</strong></td></tr>
+  <tr><td>100</td><td>4.2K-11.2K</td><td><strong>$34-90</strong></td></tr>
+  <tr><td>200</td><td>8.4K-22.4K</td><td><strong>$67-179</strong></td></tr>
+  <tr><td>500</td><td>21K-56K</td><td><strong>$168-448</strong></td></tr>
+  <tr><td>1,000</td><td>42K-112K</td><td><strong>$336-896</strong></td></tr>
+</table>
+
+<p><strong>Prompt caching is critical.</strong> PLAYBOOK + system prompt (~4K tokens) cached with 5-min TTL. At 50+ scouts, cache hit rate 90%+. Without caching: 10x higher costs.</p>
+
+<h3>2.4 On-Chain: Hedgey Contracts + Custom Claim UI</h3>
+
+<p><strong>Approach:</strong> Claim-based distribution. We publish merkle root, scouts claim when ready. They pay gas (Base ~$0.001/claim). Our cost: $0.</p>
+
+<p><strong>Why Hedgey:</strong></p>
+<ul>
+  <li>Already in Fair ecosystem (token locks)</li>
+  <li>Audited by Consensys Diligence (5+ audits)</li>
+  <li>Deployed on Base</li>
+  <li>Open-source contracts on GitHub (<code>ClaimCampaigns</code>, <code>DelegatedTokenClaims</code>)</li>
+  <li>API + contracts are free (public goods model)</li>
+</ul>
+
+<h4>Integration: Hedgey Contracts + Our UI</h4>
+<pre>
+ADMIN SIDE (automated, end of day/week):
+  Calculate points → Generate CSV (wallet, amount)
+  → Upload to Hedgey API (creates merkle tree, stores proofs)
+  → Deploy claim campaign on Hedgey contract
+  → Store claim UUID in Supabase
+
+SCOUT SIDE (on fair.xyz/scout/rewards):
+  Connects wallet (already via Privy)
+  → Frontend queries Hedgey API for available claims
+  → Shows: "You have 5,000,000 $FAIR to claim"
+  → Scout clicks "Claim" → signs tx → tokens sent
+  → All on our site. Hedgey contract under the hood.
+</pre>
+
+<div class="callout">
+  <p><strong>Note:</strong> Hedgey team joining Anchorage Digital (acquisition). Risk limited — we use their immutable on-chain contracts + open-source code. If API goes down, we generate merkle trees ourselves.</p>
+</div>
+
+<h3>2.5 Data Storage: Supabase</h3>
+
+<p>Already on Supabase Pro ($25/mo). Scout game adds ~50MB per season. New tables fit within existing plan. <strong>Incremental cost: ~$0.</strong></p>
+
+<div class="callout warn">
+  <p><strong>⚠️ Flag for dev team:</strong> Adding tables to existing Supabase instance needs sign-off. RLS policies, backup strategy for reward calculations, potential read replicas if leaderboard queries impact pipeline.</p>
+</div>
+
+<h3>2.6 Frontend: Vercel</h3>
+<p>Terminal Dashboard already on Vercel Pro ($20/user/mo). Scout dashboard is additional pages on same deployment. <strong>Incremental cost: ~$0.</strong></p>
+
+<h3>2.7 Total Cost Model</h3>
+<table>
+  <tr><th>Scenario</th><th>X API</th><th>Privy</th><th>AI</th><th>Supabase</th><th>Vercel</th><th>Hedgey</th><th>TOTAL</th></tr>
+  <tr><td>GP Test (10)</td><td>$200</td><td>$0</td><td>$2</td><td>$0</td><td>$0</td><td>$0</td><td><strong>$202</strong></td></tr>
+  <tr><td>Public S1 (50)</td><td>$200</td><td>$0-299</td><td>$45</td><td>$0</td><td>$0</td><td>$0</td><td><strong>$245-544</strong></td></tr>
+  <tr><td>Growth (200)</td><td>$200-400</td><td>$299</td><td>$179</td><td>$0-25</td><td>$0-20</td><td>$0</td><td><strong>$698-923</strong></td></tr>
+  <tr><td>Scale (500)</td><td>$5,000</td><td>$499</td><td>$448</td><td>$25-50</td><td>$20-40</td><td>$0</td><td><strong>$5,992-6,037</strong></td></tr>
+  <tr><td>Full (1000+)</td><td>$5,000</td><td>$499+</td><td>$560</td><td>$50-100</td><td>$40-100</td><td>$0</td><td><strong>$6,149-6,259</strong></td></tr>
+</table>
+
+<h3>2.8 Cost Sensitivity</h3>
+<pre>
+Test (10 scouts):     X API ████████████████████████████████████████ 99%
+
+Public (50 scouts):   X API ██████████████████████████████████ 68%
+                      Privy ████████████████ 32%
+
+Growth (500 scouts):  X API █████████████████████████████████████████████ 83%
+                      Privy ████████ 8%
+                      AI    ██████ 7%
+</pre>
+
+<h4>Break-Even: Infra vs Reward Pool</h4>
+<table>
+  <tr><th>Scenario</th><th>Infra Cost/Season</th><th>Pool Value ($1.2M FDV)</th><th>Infra as % of Rewards</th></tr>
+  <tr><td>Test (1 week)</td><td>~$50</td><td>$12,000</td><td>0.4%</td></tr>
+  <tr><td>Public S1 (2 weeks)</td><td>~$400</td><td>$12,000</td><td>3.3%</td></tr>
+  <tr><td>200 scouts (2 weeks)</td><td>~$700</td><td>$12,000</td><td>5.8%</td></tr>
+  <tr><td>500 scouts (monthly)</td><td>~$6,000</td><td>$12,000</td><td class="rh">50% ⚠️</td></tr>
+</table>
+<p>At 500+ scouts with $1.2M FDV, infra eats half the pool. Works only if FDV grows or X API costs drop.</p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: OUTCOMES & KPIs (FULL) -->
+<!-- ============================================================ -->
+<section id="s3">
+<h2><span class="num">3 —</span> Outcomes & KPIs</h2>
+
+<h3>3.1 Goals (Priority Order)</h3>
+
+<h4>Priority 1: Better Token Sourcing</h4>
+<p>The entire point. Human scouts find alpha that algorithms miss. Scouts on X extend the agent's reach — different sources, different networks, different pattern recognition.</p>
+<p><strong>Success:</strong> Agent receives scout-sourced signals that lead to profitable trades the pipeline would have missed. Even one trade per season that the pipeline wouldn't have found independently makes the mechanic valuable.</p>
+
+<h4>Priority 2: Visibility on Winning Plays</h4>
+<p>If @fairvc becomes the default tag when someone finds alpha, every runner gives us visibility. When the token pumps, people see Fair was tagged early.</p>
+<p><strong>Success:</strong> @fairvc becomes a reflexive tag in CT alpha circles. People tag us without being scouts because they've seen it work.</p>
+
+<h4>Priority 3: Brand Awareness</h4>
+<p>Every submission is a public tweet mentioning @fairvc. Every published signal demonstrates capability. Leaderboard creates competition → posts about the game → awareness.</p>
+
+<h4>Priority 4: New Token Buyers</h4>
+<p>Every scout must hold $FAIR. Tier progression incentivizes holding and buying more. Flywheel: more scouts → more alpha → better trades → token up → more scouts.</p>
+
+<h3>3.2 GP Test KPIs (1 week, 10 GPs)</h3>
+
+<h4>Primary</h4>
+<table>
+  <tr><th>KPI</th><th>Bear</th><th>Normal</th><th>Bull</th><th>Kill Signal</th></tr>
+  <tr><td>Active GPs (submitted ≥1)</td><td>5/10</td><td>7/10</td><td>10/10</td><td class="rh">&lt;4/10</td></tr>
+  <tr><td>Total submissions</td><td>50</td><td>120</td><td>250+</td><td class="rh">&lt;30</td></tr>
+  <tr><td>Acceptance rate</td><td>15%</td><td>25%</td><td>35%</td><td class="rh">&lt;10% or &gt;50%</td></tr>
+  <tr><td>Signals published</td><td>2</td><td>5</td><td>10+</td><td class="rm">0</td></tr>
+  <tr><td>Trades from scouts</td><td>0</td><td>1</td><td>3+</td><td>—</td></tr>
+  <tr><td>GP satisfaction</td><td>"okay"</td><td>"useful"</td><td>"found stuff I'd miss"</td><td class="rh">"waste of time"</td></tr>
+</table>
+
+<h4>Secondary</h4>
+<table>
+  <tr><th>KPI</th><th>Target</th></tr>
+  <tr><td>Time: submission → evaluation</td><td>&lt;1 hour</td></tr>
+  <tr><td>Duplicate submission rate</td><td>&lt;30%</td></tr>
+  <tr><td>Technical issues / bugs</td><td>&lt;3 blockers</td></tr>
+  <tr><td>False positives (agent acts on bad signal)</td><td>0</td></tr>
+</table>
+
+<p><strong>Pass:</strong> ≥6 GPs active, ≥3 signals, no critical bugs, ≥1 "pipeline would have missed this."</p>
+<p><strong>Conditional pass:</strong> 4-5 GPs, mechanics work but engagement low. Tune and retest.</p>
+<p><strong>Fail:</strong> &lt;4 GPs engage, mostly noise, or scout signal → bad trade.</p>
+
+<h3>3.3 Public S1 KPIs (2 weeks, open tiers)</h3>
+
+<h4>Primary</h4>
+<table>
+  <tr><th>KPI</th><th>Bear</th><th>Normal</th><th>Bull</th><th>Kill</th></tr>
+  <tr><td>Scouts onboarded</td><td>15</td><td>50</td><td>150+</td><td class="rh">&lt;10</td></tr>
+  <tr><td>Active (≥3 subs)</td><td>8</td><td>30</td><td>100+</td><td class="rh">&lt;5</td></tr>
+  <tr><td>Tier distribution (T1/T2/T3/GP)</td><td>80/15/5/0%</td><td>50/25/15/10%</td><td>40/25/20/15%</td><td class="rh">95%+ T1</td></tr>
+  <tr><td>Submissions/day (avg)</td><td>15</td><td>50</td><td>150+</td><td class="rh">&lt;5/day after D3</td></tr>
+  <tr><td>Signals published (season)</td><td>5</td><td>15</td><td>40+</td><td class="rh">&lt;3</td></tr>
+  <tr><td>Scout-sourced trades</td><td>1</td><td>3</td><td>8+</td><td class="rh">0 full season</td></tr>
+  <tr><td>Trade win rate</td><td>—</td><td>≥40%</td><td>≥60%</td><td class="rh">0%</td></tr>
+  <tr><td>New buy volume</td><td>$1.5K</td><td>$9K</td><td>$45K+</td><td class="rh">&lt;$500</td></tr>
+  <tr><td>Net token impact</td><td>-$3.6K</td><td>+$4K</td><td>+$56K</td><td class="rh">Sustained negative</td></tr>
+</table>
+
+<h4>Sourcing Quality KPIs</h4>
+<table>
+  <tr><th>KPI</th><th>Target</th><th>How to Measure</th></tr>
+  <tr><td>Unique projects (not in DB)</td><td>≥30% of subs</td><td>Compare vs <code>projects</code> at submission time</td></tr>
+  <tr><td>Pipeline would have missed</td><td>≥5/season</td><td>Manual tag: was project on radar?</td></tr>
+  <tr><td>Time advantage over pipeline</td><td>≥24h ahead on ≥3 projects</td><td>Timestamp comparison</td></tr>
+  <tr><td>Unique trade-level from scouts</td><td>≥1/season</td><td>Did scouts find alpha agent wouldn't have?</td></tr>
+</table>
+
+<h4>Visibility KPIs</h4>
+<table>
+  <tr><th>KPI</th><th>Bear</th><th>Normal</th><th>Bull</th></tr>
+  <tr><td>@fairvc mentions/week (organic, non-scout)</td><td>+10%</td><td>+30%</td><td>+100%</td></tr>
+  <tr><td>Follower growth during season</td><td>+50</td><td>+200</td><td>+1,000</td></tr>
+  <tr><td>Non-scout tags</td><td>5</td><td>20</td><td>100+</td></tr>
+  <tr><td>"Tag @fairvc" screenshot moments</td><td>0</td><td>2</td><td>10+</td></tr>
+</table>
+
+<h3>3.4 Kill Criteria</h3>
+<table>
+  <tr><th>Signal</th><th>Threshold</th><th>When</th><th>Action</th></tr>
+  <tr><td>No interest</td><td>&lt;10 scouts despite marketing</td><td>End of D3</td><td>Pause. Reassess GTM or incentives</td></tr>
+  <tr><td>Dead game</td><td>Active scouts &lt;5 for 3 days</td><td>Mid-season</td><td>End early, preserve pool</td></tr>
+  <tr><td>Tier collapse</td><td>&gt;90% T1, zero tier-ups after S1</td><td>End of S1</td><td>Redesign thresholds/multipliers</td></tr>
+  <tr><td>Zero sourcing</td><td>0 trade-level signals over 2 seasons</td><td>End of S2</td><td>Kill or pivot to signal-only</td></tr>
+  <tr><td>Bad economics</td><td>Sell &gt;2x buy for 2 consecutive seasons</td><td>End of season</td><td>Pause until conditions change</td></tr>
+  <tr><td>Bad trades</td><td>&lt;20% win rate over 2 seasons</td><td>End of S2</td><td>Kill trade rewards, keep DB+signal</td></tr>
+  <tr><td>Exploitation</td><td>Confirmed gaming of confidence</td><td>Any time</td><td>Immediate pause. Fix pipeline</td></tr>
+  <tr><td>Platform risk</td><td>X account suspended / API revoked</td><td>Any time</td><td>Activate Farcaster fallback</td></tr>
+</table>
+
+<h3>3.5 Baseline Problem</h3>
+<p>No current benchmark for autonomous pipeline performance. Solution: run both systems in parallel during GP test. Tag every signal with <code>source_type</code> (pipeline / scout / both). First real data point for "are scouts additive?"</p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3B: MEASUREMENT FRAMEWORK -->
+<!-- ============================================================ -->
+<section id="s3b">
+<h2><span class="num">3b —</span> Measurement Framework</h2>
+
+<p>Set up <strong>before</strong> launch — not after.</p>
+
+<h3>A. Data Collection (Built Into System)</h3>
+
+<h4>1. Source tagging</h4>
+<p>Add <code>source_type</code> field to <code>projects</code>, <code>agent_memory</code>, and signal/trade records. Values: <code>pipeline</code> / <code>scout</code> / <code>both</code>. Add <code>project_existed_at_submission</code> boolean to <code>scout_submissions</code>.</p>
+
+<h4>2. Daily metrics snapshot (<code>scout_daily_metrics</code>)</h4>
+<p>Automated cron, one row per day:</p>
+<table>
+  <tr><th>Field</th><th>Source</th></tr>
+  <tr><td>active_scouts, total_submissions</td><td>scout_submissions</td></tr>
+  <tr><td>rejected / db_save / signal / trade</td><td>scout_submissions grouped by result</td></tr>
+  <tr><td>pool_remaining</td><td>scout_seasons</td></tr>
+  <tr><td>new_signups, cumulative_scouts</td><td>scout_profiles</td></tr>
+  <tr><td>fairvc_mentions, fairvc_followers</td><td>X API</td></tr>
+</table>
+
+<h4>3. Evaluation log enrichment</h4>
+<p>Every <code>scout_submissions</code> row stores: <code>confidence_score</code>, <code>evaluation_time_ms</code>, <code>evaluator_model</code>, <code>reasoning_summary</code>, <code>duplicate_of</code>.</p>
+
+<h4>4. Trade outcome tracking (async)</h4>
+<p>For scout-sourced trades: <code>trade_entry_price</code>, <code>trade_exit_price</code>, <code>trade_pnl_percent</code>, <code>trade_pnl_usd</code>, <code>trade_status</code>. Updated as positions close.</p>
+
+<h3>B. Pre-Launch Baseline Snapshot</h3>
+<table>
+  <tr><th>Metric</th><th>Where</th></tr>
+  <tr><td>Total projects in DB</td><td>Supabase <code>count(projects)</code></td></tr>
+  <tr><td>Total agent_memory entries</td><td>Supabase <code>count(agent_memory)</code></td></tr>
+  <tr><td>Last 10 autonomous signals</td><td>Signal feed</td></tr>
+  <tr><td>Last 10 autonomous trades + PNL</td><td>Trading records</td></tr>
+  <tr><td>@fairvc followers</td><td>X API / manual</td></tr>
+  <tr><td>@fairvc avg mentions/week (4 weeks)</td><td>X API / manual</td></tr>
+  <tr><td>$FAIR price / FDV / total holders</td><td>DexScreener / BaseScan</td></tr>
+</table>
+<p>Same snapshot after test, after S1, after each season. Delta = impact.</p>
+
+<h3>C. Post-Season Analysis Playbook</h3>
+<p><strong>Step 1: Export (30 min)</strong> — CSV dumps of scout_daily_metrics, scout_submissions, scout_profiles, scout_leaderboard. Post-season baseline snapshot.</p>
+
+<p><strong>Step 2: Automated report (build once)</strong> — Script outputs:</p>
+<pre>
+SCOUT GAME — SEASON [X] REPORT
+
+PARTICIPATION
+- Scouts registered / active (≥3 subs) / tier distribution
+- Submissions total (avg/day) / acceptance rate
+
+SOURCING QUALITY
+- Unique new projects from scouts
+- Projects found before pipeline (avg time advantage)
+- Signals published / trades executed (scout-sourced)
+- Trade win rate / avg PNL
+
+ECONOMICS
+- Pool allocated / spent / utilization %
+- Reward sell pressure (est.) / new scout buy pressure
+- Net token impact / $FAIR price change
+
+ENGAGEMENT
+- Day-over-day trends (active scouts, submissions)
+- Drop-off point / @fairvc mentions change / follower change
+
+KILL CRITERIA CHECK
+→ VERDICT: [CONTINUE / TUNE / PAUSE / KILL]
+</pre>
+
+<p><strong>Step 3: Qualitative review (1 hour)</strong> — Read top 10 submissions (good + bad). Talk to 3-5 scouts. Compare scout vs pipeline quality.</p>
+
+<p><strong>Step 4: Decision meeting (30 min)</strong> — Review report, check KPIs, check kill criteria, decide next steps.</p>
+
+<h3>D. Tools</h3>
+<table>
+  <tr><th>Tool</th><th>Purpose</th><th>Have?</th></tr>
+  <tr><td>Supabase</td><td>All data storage, queries, exports</td><td>✅</td></tr>
+  <tr><td>Dune Analytics</td><td>Public dashboards, on-chain metrics</td><td>✅</td></tr>
+  <tr><td>X API</td><td>Mention counts, follower tracking</td><td>✅</td></tr>
+  <tr><td>Telegram bot</td><td>Daily digest to team</td><td>✅</td></tr>
+  <tr><td>Report script</td><td>Post-season generation from exports</td><td>Build once</td></tr>
+</table>
+
+<h3>E. Setup Effort</h3>
+<p>~5 hours dev time pre-launch. After that, analysis mostly automated.</p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: GOVERNANCE & RETENTION (FULL) -->
+<!-- ============================================================ -->
+<section id="s4">
+<h2><span class="num">4 —</span> Governance & Retention</h2>
+
+<h3>4.1 Decision Authority</h3>
+<p>All parameters: core team (you + Luke). No DAO, no GP committee. Fast iteration > decentralization.</p>
+
+<table>
+  <tr><th>Parameter</th><th>Mid-Season?</th><th>Communication</th></tr>
+  <tr><td>Pool size, tier thresholds, multipliers, point values, season duration</td><td><span class="tag red">Locked</span></td><td>Announce before season</td></tr>
+  <tr><td>Submission rate limits</td><td><span class="tag amber">Adjustable</span></td><td>Immediate, explain reason</td></tr>
+  <tr><td>Confidence thresholds, model selection</td><td><span class="tag green">Internal</span></td><td>No announcement (invisible to scouts)</td></tr>
+  <tr><td>Emergency pause</td><td><span class="tag red">Any time</span></td><td>Immediate with reason</td></tr>
+  <tr><td>Ban scout</td><td><span class="tag amber">Any time</span></td><td>Private notice to scout</td></tr>
+  <tr><td>Season extension</td><td><span class="tag amber">Can extend</span></td><td>48h notice</td></tr>
+</table>
+
+<h3>4.2 Season Structure</h3>
+<p>Continuous seasons, no gaps. 1-3 days between (analysis → tune → deploy → announce).</p>
+
+<table>
+  <tr><th>Phase</th><th>Duration</th><th>What Happens</th></tr>
+  <tr><td>Pre-season</td><td>1-3 days</td><td>Announce parameters, open signups, deploy pool</td></tr>
+  <tr><td>Active</td><td>2 weeks</td><td>Submissions, evaluations, daily/weekly payouts</td></tr>
+  <tr><td>Settlement</td><td>1 day</td><td>Final calculations, weekly payout, claims live</td></tr>
+  <tr><td>Analysis</td><td>1 day</td><td>Post-season report</td></tr>
+  <tr><td>Transition</td><td>1 day</td><td>Adjustments, next season setup → loop</td></tr>
+</table>
+
+<h4>What Resets</h4>
+<table>
+  <tr><th>Element</th><th>Resets?</th></tr>
+  <tr><td>Points + leaderboard</td><td>Yes — fresh start</td></tr>
+  <tr><td>Tier status</td><td>No — current holdings</td></tr>
+  <tr><td>Submission history / track record</td><td>No — cumulative</td></tr>
+  <tr><td>Reputation (future)</td><td>No — grows across seasons</td></tr>
+  <tr><td>Reward pool</td><td>New allocation each season</td></tr>
+</table>
+
+<h3>4.3 Retention Mechanics</h3>
+
+<p><strong>Layer 1: Tier Progression.</strong> Earn → hold → tier up → earn more. T1 earns 10M → holds → T2 (1.5x). Costs nothing, benefit concrete.</p>
+
+<p><strong>Layer 2: Leaderboard.</strong> Weekly top 10, public recognition, 25% of weekly pool to #1. Posted by @fairvc = competition → content.</p>
+
+<p><strong>Layer 3: Track Record (post-MVP).</strong> Scout Score: submissions accepted, signals→trades, win rate, seasons active, streaks. Money can't buy a profitable track record — creates status independent of holdings.</p>
+
+<p><strong>Layer 4: Hold Duration Multiplier (option, S2+).</strong></p>
+<table>
+  <tr><th>Hold Duration</th><th>Bonus</th><th>Example: T2 (1.5x)</th></tr>
+  <tr><td>&lt;30 days</td><td>1.0x</td><td>→ effective 1.5x</td></tr>
+  <tr><td>30-90 days</td><td>1.1x</td><td>→ effective 1.65x</td></tr>
+  <tr><td>90-180 days</td><td>1.2x</td><td>→ effective 1.8x</td></tr>
+  <tr><td>180+ days</td><td>1.3x</td><td>→ effective 1.95x</td></tr>
+</table>
+<p>Rewards loyalty, discourages buy-sell around seasons. Flagged for S2+ — tier system sufficient for MVP.</p>
+
+<p><strong>Layer 5: Badges (post-MVP).</strong> "S1 Pioneer," "Alpha Hunter" (≥3 trade signals/season), "Consistent Scout" (daily for full season), "First Blood" (first trade-level submission). Zero cost, collectors mentality.</p>
+
+<h3>4.4 Edge Cases</h3>
+
+<p><strong>Tier drops mid-season:</strong> Tier checked at each submission. Holdings dropped → lower multiplier on new submissions. Already-earned points not adjusted.</p>
+
+<p><strong>Banned scout:</strong> Points removed from pool calculations. Unclaimed rewards returned to pool.</p>
+
+<p><strong>Pool runs fast:</strong> Proportional model = can't overspend. But if reward per point drops too low, scouts lose motivation. Option 1 (default): accept dilution. Option 2: add tokens to pool with announcement.</p>
+
+<p><strong>Disputed evaluation:</strong> No appeals in MVP. Agent's decision final. Post-MVP: "dispute" button, manual review, cap 3/season/scout.</p>
+
+<h3>4.5 Parameter Evolution</h3>
+<table>
+  <tr><th>Parameter</th><th>S0 (Test)</th><th>S1 (Public)</th><th>S2-S3</th><th>S4+</th></tr>
+  <tr><td>Duration</td><td>1 week</td><td>2 weeks</td><td>2 weeks</td><td>Longer if stable</td></tr>
+  <tr><td>Pool</td><td>1% (1B)</td><td>1% (1B)</td><td>1-2%</td><td>Dynamic</td></tr>
+  <tr><td>Tiers</td><td>GP only</td><td>4 tiers</td><td>Tuned thresholds</td><td>+ Hold multiplier</td></tr>
+  <tr><td>Points</td><td>1/5/20</td><td>1/5/20</td><td>Adjusted from data</td><td>+ Discovery/streak</td></tr>
+  <tr><td>Reputation</td><td>None</td><td>None</td><td>Track record visible</td><td>Scout Score as multiplier</td></tr>
+</table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: GTM (FULL) -->
+<!-- ============================================================ -->
+<section id="s5">
+<h2><span class="num">5 —</span> GTM Plan</h2>
+
+<h3>5.1 Test Launch (GP Only)</h3>
+<table>
+  <tr><th>Day</th><th>Action</th></tr>
+  <tr><td>D-3</td><td>Send brief doc to GPs via DM (1-pager: what, how, scoring, rules)</td></tr>
+  <tr><td>D-2</td><td>Group chat: "test starts in 2 days, read doc, questions?"</td></tr>
+  <tr><td>D-1</td><td>Optional 15-min call walkthrough. Not mandatory.</td></tr>
+  <tr><td>D0</td><td>Live. First submission from team member to demo flow. Pin in GP chat.</td></tr>
+  <tr><td>D1-D6</td><td>Daily: leaderboard update in GP chat. Flag interesting submissions. Feedback check.</td></tr>
+  <tr><td>D7</td><td>Season ends. Run analysis (Section 3b). Share results.</td></tr>
+  <tr><td>D8-D10</td><td>Tune parameters. Prep public launch.</td></tr>
+</table>
+
+<h4>GP Brief (1-Pager Contents)</h4>
+<ul>
+  <li><strong>What:</strong> Find alpha on X, tag @fairvc, agent evaluates, earn $FAIR</li>
+  <li><strong>How:</strong> Tag @fairvc in tweet with project + your take (not just a link)</li>
+  <li><strong>Scoring:</strong> DB save = 1pt, Signal = 5pt, Trade = 20pt. Flat for test.</li>
+  <li><strong>Pool:</strong> 1B tokens (1%) for 1 week</li>
+  <li><strong>Rules:</strong> Max 5/day. No copy-paste. Your own analysis.</li>
+  <li><strong>Don't:</strong> Spam, submit obvious scams, coordinate submissions</li>
+  <li><strong>Feedback:</strong> Tell us what's broken, confusing, or stupid. That's the point.</li>
+</ul>
+<p>Tone: Fair voice. Lowercase, direct, compressed.</p>
+
+<h4>GP Onboarding Flow</h4>
+<pre>
+GP has 250M+ $FAIR (already)
+  → receives DM with brief
+  → connects wallet on fair.xyz (Privy — X login + wallet)
+  → sees scout dashboard: tier = GP, points = 0
+  → goes to X, finds alpha, tags @fairvc
+  → within 1 hour: result notification
+  → points appear on dashboard
+  → end of day: daily pool share
+  → end of week: leaderboard payout + claim
+</pre>
+
+<h3>5.2 Public Launch</h3>
+
+<h4>Pre-Launch Content Sequence</h4>
+<table>
+  <tr><th>Day</th><th>Channel</th><th>Content</th><th>Purpose</th></tr>
+  <tr><td>D-7</td><td>FC + X</td><td>"tested something with GPs. results interesting."</td><td>Curiosity</td></tr>
+  <tr><td>D-5</td><td>FC + X</td><td>GP test results: X submissions, Y signals, Z trades</td><td>Proof</td></tr>
+  <tr><td>D-3</td><td>FC + X</td><td>Announcement + explainer thread</td><td>Core message</td></tr>
+  <tr><td>D-2</td><td>FC + X</td><td>"Leaderboard preview — top scouts earn [amount]"</td><td>Incentive</td></tr>
+  <tr><td>D-1</td><td>FC + X</td><td>"Tomorrow. Hold $FAIR. Find alpha. Get paid."</td><td>Hype</td></tr>
+</table>
+
+<h4>Key Message (Fair tone)</h4>
+<pre>
+scout game is live
+
+hold $FAIR → find alpha on X → tag @fairvc → agent evaluates → earn rewards
+
+4 tiers: 2M / 10M / 50M / 250M
+higher hold = bigger multiplier = more rewards
+
+season 1: 2 weeks. 1B token pool.
+
+the agent is watching. show us what you've got.
+</pre>
+
+<h4>Launch Day</h4>
+<table>
+  <tr><th>Time</th><th>Action</th></tr>
+  <tr><td>Morning</td><td>"Season 1 is live" on FC + X</td></tr>
+  <tr><td>+1h</td><td>First submission from GP/team (seed the mechanic)</td></tr>
+  <tr><td>+3h</td><td>First leaderboard snapshot</td></tr>
+  <tr><td>End of day</td><td>Daily recap: submissions, signals, standings</td></tr>
+</table>
+
+<h4>First Week Cadence</h4>
+<table>
+  <tr><th>Content</th><th>Frequency</th></tr>
+  <tr><td>Leaderboard update</td><td>Daily</td></tr>
+  <tr><td>"Signal of the day" (best scout submission)</td><td>Daily (if material)</td></tr>
+  <tr><td>Scout spotlight</td><td>2-3x/week</td></tr>
+  <tr><td>Trade alert (scout-sourced trade hits)</td><td>Real-time</td></tr>
+  <tr><td>Mid-season stats</td><td>Day 7</td></tr>
+</table>
+<p><strong>Trade alert = killer content.</strong> "Scout @handle submitted $TOKEN at $X FDV → agent 85% confidence → trade executed → currently +40%."</p>
+
+<h3>5.3 Growth Levers</h3>
+
+<p><strong>Winning trades = best marketing.</strong> Post the before/after publicly. No announcement thread beats a real winning trade with clear scout attribution.</p>
+
+<p><strong>Leaderboard as content.</strong> Weekly posts → competition → social proof → FOMO.</p>
+
+<p><strong>The "tag @fairvc" meme.</strong> Grows from visible, repeated proof that tagging works. Can't be forced.</p>
+
+<p><strong>Scout-as-identity.</strong> "I'm a Fair scout" in bio. Badges, track record, tier status. Longer-term.</p>
+
+<h3>5.4 Scout Acquisition Funnel</h3>
+<pre>
+AWARENESS
+│ Sees @fairvc signal or winning trade post
+│ Sees friend tagged @fairvc and earned rewards
+│ Sees leaderboard with earnings
+▼
+INTEREST
+│ Checks dashboard / reads how-to
+│ Sees tiers, rewards, leaderboard
+│ Calculates ROI on $24 entry
+▼
+DECISION
+│ Cost: $24 (T1) to $3K (GP)
+│ Friction: buy $FAIR on Base → connect → submit
+▼
+ACTION
+│ Buys → connects → first submission
+▼
+RETENTION
+│ First result → if accepted: motivated → if rejected: needs good feedback
+│ Tier progression: hold rewards → tier up
+▼
+ADVOCACY
+│ Top scouts share results → organic marketing → new scouts
+</pre>
+
+<h4>Friction Points</h4>
+<table>
+  <tr><th>Friction</th><th>Impact</th><th>Mitigation</th></tr>
+  <tr><td>Buying $FAIR on Base</td><td>High</td><td>Clear guide: "buy $FAIR in 3 steps"</td></tr>
+  <tr><td>Wallet + X connect</td><td>Medium</td><td>Privy one-click flow</td></tr>
+  <tr><td>First submission rejected</td><td>High</td><td>Clear feedback: "rejected because [reason]"</td></tr>
+  <tr><td>No feedback for hours</td><td>Medium</td><td>Instant "received" + result within 1h</td></tr>
+  <tr><td>Whales dominate leaderboard</td><td>Medium</td><td>Highlight T1 success stories</td></tr>
+</table>
+
+<h3>5.5 Launch Checklist</h3>
+<h4>Must Have (Test)</h4>
+<ul class="checklist">
+  <li>Scout dashboard (profile, leaderboard, pool status)</li>
+  <li>Privy auth (X login + wallet)</li>
+  <li>X API mention monitoring</li>
+  <li>Evaluation pipeline (submission → score → result)</li>
+  <li>Points calculation (daily pool split)</li>
+  <li>Hedgey claim campaign ready</li>
+  <li>GP brief document</li>
+  <li><code>scout_daily_metrics</code> cron job</li>
+  <li><code>source_type</code> field on signals/trades</li>
+  <li>Baseline snapshot taken</li>
+  <li>End-to-end test submission verified</li>
+</ul>
+
+<h4>Must Have (Public, additional)</h4>
+<ul class="checklist">
+  <li>Tier system (4 tiers + multipliers)</li>
+  <li>Weekly leaderboard calculation</li>
+  <li>Embedded claim UI (Hedgey + custom frontend)</li>
+  <li>Announcement content ready</li>
+  <li>Leaderboard public view</li>
+  <li>Rate limit enforcement</li>
+  <li>Duplicate detection</li>
+  <li>Anti-spam rules documented</li>
+</ul>
+
+<h4>Nice to Have (S1)</h4>
+<ul class="checklist">
+  <li>"Signal of the day" auto-post</li>
+  <li>Scout profile pages (public, shareable)</li>
+  <li>Tier progression tracker</li>
+  <li>TG push for result notifications</li>
+  <li>Season countdown</li>
+</ul>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: INTERNAL TRACKING (FULL) -->
+<!-- ============================================================ -->
+<section id="s6">
+<h2><span class="num">6 —</span> Internal Tracking System</h2>
+
+<h3>6.1 Metrics</h3>
+
+<h4>Core Metrics</h4>
+<table>
+  <tr><th>Metric</th><th>Source</th><th>Frequency</th><th>Visibility</th></tr>
+  <tr><td>Active scouts</td><td>scout_submissions</td><td>Hourly</td><td>Team + Public (count)</td></tr>
+  <tr><td>Total submissions</td><td>scout_submissions</td><td>Hourly</td><td>Team + Public</td></tr>
+  <tr><td>Acceptance rate (DB/signal/trade %)</td><td>scout_submissions</td><td>Hourly</td><td>Team only</td></tr>
+  <tr><td>Signals published (scout-sourced)</td><td>scout_submissions + feed</td><td>Real-time</td><td>Team + Public</td></tr>
+  <tr><td>Trades (scout-sourced)</td><td>scout_submissions + trades</td><td>Real-time</td><td>Team + Public</td></tr>
+  <tr><td>Daily rewards distributed</td><td>Points engine</td><td>Daily</td><td>Team + Public (pool)</td></tr>
+  <tr><td>Sell pressure (scout wallets)</td><td>Dune</td><td>Daily</td><td>Team only</td></tr>
+  <tr><td>Buy pressure (scout wallets)</td><td>Dune</td><td>Daily</td><td>Team only</td></tr>
+  <tr><td>Net token impact</td><td>Derived</td><td>Daily</td><td>Team only</td></tr>
+  <tr><td>Leaderboard</td><td>Points engine</td><td>Hourly</td><td>Team + Public</td></tr>
+  <tr><td>Pool remaining</td><td>scout_seasons</td><td>Hourly</td><td>Team + Public</td></tr>
+  <tr><td>Reward per weighted point</td><td>Derived</td><td>Daily</td><td>Team only</td></tr>
+  <tr><td>New signups</td><td>scout_profiles</td><td>Hourly</td><td>Team only</td></tr>
+</table>
+
+<h4>Scout-Level Metrics</h4>
+<table>
+  <tr><th>Metric</th><th>Purpose</th></tr>
+  <tr><td>Submissions (total / accepted / rejected)</td><td>Activity + quality</td></tr>
+  <tr><td>Points (daily / weekly / season)</td><td>Reward calculation</td></tr>
+  <tr><td>Tier + holdings</td><td>Tier verification</td></tr>
+  <tr><td>Win rate (% → signal or trade)</td><td>Track record</td></tr>
+  <tr><td>Unique projects submitted</td><td>Sourcing quality</td></tr>
+  <tr><td>Tokens earned (claimed / unclaimed)</td><td>Reward tracking</td></tr>
+  <tr><td>Tokens sold after claim</td><td>Sell pressure per scout</td></tr>
+</table>
+
+<h3>6.2 Database Schema</h3>
+
+<div class="callout warn">
+  <p><strong>⚠️ Schema subject to dev team review.</strong></p>
+</div>
+
+<pre>
+-- scout_profiles
+  id, wallet_address, x_handle, x_user_id, tier,
+  token_balance, balance_checked_at, joined_at,
+  is_banned, ban_reason
+
+-- scout_submissions
+  id, scout_id, season_id, tweet_id, tweet_url, tweet_content,
+  project_ref, project_existed,
+  submitted_at, evaluated_at, evaluation_time_ms,
+  evaluator_model, confidence_score, result,
+  reasoning_summary, base_points, weighted_points,
+  source_type, duplicate_of
+
+-- scout_points_daily
+  id, scout_id, season_id, date,
+  submissions_count, accepted_count,
+  base_points, weighted_points, daily_pool_share
+
+-- scout_leaderboard
+  id, scout_id, season_id, week_number,
+  total_weighted_points, rank, weekly_pool_share
+
+-- scout_rewards
+  id, scout_id, season_id, reward_type,
+  tokens_amount, claim_status,
+  hedgey_campaign_id, claim_tx_hash, claimed_at
+
+-- scout_seasons
+  id, season_number, name, status,
+  start_date, end_date, pool_tokens, pool_remaining,
+  daily_pool_pct, weekly_pool_pct,
+  multipliers_active, parameters (JSONB)
+
+-- scout_daily_metrics
+  id, season_id, date,
+  active_scouts, total_submissions,
+  rejected/db_save/signal/trade counts,
+  total_weighted_points, daily_pool_distributed,
+  reward_per_point, new_signups, cumulative_scouts,
+  fairvc_mentions, fairvc_followers, fair_price, fair_fdv
+</pre>
+
+<h3>6.3 Admin vs Public Dashboard</h3>
+
+<h4>Admin (<code>fair.xyz/admin/scout</code>, team-gated)</h4>
+<ul>
+  <li><strong>Overview:</strong> Season status, today's numbers, trend sparklines, alerts</li>
+  <li><strong>Submissions feed:</strong> Real-time, filterable by result/tier/date, expandable reasoning</li>
+  <li><strong>Economics:</strong> Buy/sell pressure, net impact, reward dilution trend, pool chart</li>
+  <li><strong>Scout management:</strong> List with stats, sort/filter, ban (public phase), click → full history</li>
+  <li><strong>Leaderboard:</strong> Same as public + sell pressure + acceptance rate columns</li>
+</ul>
+
+<h4>Public (<code>fair.xyz/scout</code>)</h4>
+<ul>
+  <li><strong>My Profile:</strong> Tier, holdings, points, submission history, claim button, tier progression</li>
+  <li><strong>Leaderboard:</strong> Top scouts by weighted points, rank + handle + tier badge + points</li>
+  <li><strong>Season Info:</strong> Days remaining, pool status, totals, scout count</li>
+  <li><strong>Signal Feed:</strong> Published scout-sourced signals with attribution (opt-in)</li>
+</ul>
+
+<h3>6.4 Processing Architecture</h3>
+
+<h4>Hourly Batch</h4>
+<pre>
+1. FETCH: X API → @fairvc mentions → parse tweet → match scout wallet → write to scout_submissions
+2. EVALUATE: Check duplicates → check DB → evaluate (confidence score) → update result
+   → If signal/trade level: push notification to team Telegram
+3. POINTS: base_points × tier_multiplier → update scout_submissions + scout_points_daily
+4. LEADERBOARD: Recalculate rankings
+5. SNAPSHOT: Update scout_daily_metrics, check alert conditions
+</pre>
+
+<h4>Daily Settlement (UTC midnight)</h4>
+<pre>
+1. Total weighted points today → each scout's share → daily pool allocation → scout_rewards
+2. Finalize scout_daily_metrics → send digest to team Telegram
+</pre>
+
+<h4>Weekly Settlement</h4>
+<pre>
+1. Rank by weekly points → payout structure (25/18/13/10/10/4.8×5) → scout_rewards
+2. Generate CSV → upload to Hedgey API → deploy claim → notify scouts
+3. Post leaderboard to @fairvc on X + Farcaster
+</pre>
+
+<h3>6.5 Alerts (Telegram Bot)</h3>
+<table>
+  <tr><th>Alert</th><th>Trigger</th><th>Severity</th></tr>
+  <tr><td>Zero activity</td><td>0 submissions in 6h</td><td><span class="tag amber">Warning</span></td></tr>
+  <tr><td>Spike</td><td>&gt;5x avg hourly subs</td><td><span class="tag amber">Warning</span></td></tr>
+  <tr><td>Sybil: same project</td><td>≥5 wallets, same project, 15 min</td><td><span class="tag red">Alert</span></td></tr>
+  <tr><td>Sybil: copy-paste</td><td>≥3 subs with &gt;80% text similarity</td><td><span class="tag red">Alert</span></td></tr>
+  <tr><td>Sybil: new wallet spam</td><td>New scout 5+ subs in first hour</td><td><span class="tag amber">Warning</span></td></tr>
+  <tr><td>Trade-level signal</td><td>80%+ confidence from scout</td><td><span class="tag purple">Action</span></td></tr>
+  <tr><td>Signal publish</td><td>60-80% confidence, publishing</td><td><span class="tag purple">Action</span></td></tr>
+  <tr><td>Low engagement</td><td>Active scouts &lt;5 for 2 days</td><td><span class="tag red">Alert</span></td></tr>
+  <tr><td>Season ending</td><td>48h / 24h / 6h before end</td><td><span class="tag blue">Info</span></td></tr>
+  <tr><td>Reward dilution</td><td>Per-point value drops below threshold</td><td><span class="tag blue">Info</span></td></tr>
+</table>
+<p>Trade-level + signal publish → also push to you + Luke individually (override window).</p>
+
+<h3>6.6 On-Chain Monitoring (Dune)</h3>
+<table>
+  <tr><th>Query</th><th>What</th><th>How</th></tr>
+  <tr><td>Scout buy pressure</td><td>$FAIR purchases by scout wallets</td><td>Transfers TO scouts on DEX pools</td></tr>
+  <tr><td>Scout sell pressure</td><td>$FAIR sales by scout wallets</td><td>Transfers FROM scouts to DEX routers</td></tr>
+  <tr><td>Claim activity</td><td>Reward claims via Hedgey</td><td>Claim txs on Hedgey contract</td></tr>
+  <tr><td>Post-claim behavior</td><td>Hold / sell / tier up after claim</td><td>Balance changes after claim tx</td></tr>
+  <tr><td>Net impact</td><td>Buy - sell per day</td><td>Derived</td></tr>
+</table>
+
+<h3>6.7 GP Test vs Public</h3>
+<table>
+  <tr><th>Component</th><th>GP Test</th><th>Public</th></tr>
+  <tr><td>Admin dashboard</td><td>Minimal (feed + leaderboard)</td><td>Full</td></tr>
+  <tr><td>Public dashboard</td><td>Not needed (GPs use admin)</td><td>Full</td></tr>
+  <tr><td>Alerts</td><td>Essential: zero activity, trade signal, season end</td><td>All</td></tr>
+  <tr><td>Dune</td><td>Skip (manual for 10 GPs)</td><td>Full</td></tr>
+  <tr><td>Sybil detection</td><td>Skip (known GPs)</td><td>Active</td></tr>
+  <tr><td>Ban system</td><td>Not needed</td><td>Available</td></tr>
+  <tr><td>Claim UI</td><td>Manual transfer / simple Hedgey link</td><td>Embedded on site</td></tr>
+</table>
+
+<h3>6.8 Dev Effort</h3>
+<table>
+  <tr><th>Task</th><th>Effort</th><th>Priority</th><th>For</th></tr>
+  <tr><td>Supabase schema</td><td>2-3h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>X API mention polling</td><td>4-6h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>Evaluation pipeline</td><td>8-12h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>Points calculation</td><td>3-4h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>Admin dashboard (basic)</td><td>6-8h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>Daily metrics cron</td><td>2h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>Telegram alerts</td><td>2-3h</td><td>P0</td><td>Test</td></tr>
+  <tr><td>Privy auth</td><td>4-6h</td><td>P1</td><td>Public</td></tr>
+  <tr><td>Public dashboard</td><td>12-16h</td><td>P1</td><td>Public</td></tr>
+  <tr><td>Tier multipliers</td><td>2h</td><td>P1</td><td>Public</td></tr>
+  <tr><td>Hedgey claim UI</td><td>8-12h</td><td>P1</td><td>Public</td></tr>
+  <tr><td>Sybil detection</td><td>4-6h</td><td>P1</td><td>Public</td></tr>
+  <tr><td>Ban system</td><td>2h</td><td>P1</td><td>Public</td></tr>
+  <tr><td>Dune dashboards</td><td>6-8h</td><td>P2</td><td>Post-S1</td></tr>
+  <tr><td>Report script</td><td>3-4h</td><td>P2</td><td>Post-test</td></tr>
+</table>
+
+<div class="stat-row">
+  <div class="stat-item"><div class="sv">~35h</div><div class="sl">Test Launch</div></div>
+  <div class="stat-item"><div class="sv">+40h</div><div class="sl">Public (additional)</div></div>
+  <div class="stat-item"><div class="sv">~75h</div><div class="sl">Full System</div></div>
+</div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- ECONOMICS (FULL) -->
+<!-- ============================================================ -->
+<section id="econ">
+<h2><span class="num">E —</span> Token Economics</h2>
+
+<h3>Core Design</h3>
+<p><strong>Proportional points system.</strong> Pool splits by weighted points each day — no fixed token amounts per action. More scouts = dilution per point but pool never overspends. Fewer scouts = concentration.</p>
+
+<ul>
+  <li><strong>Daily:</strong> Points earned today → daily pool (50%) split proportionally by weighted points</li>
+  <li><strong>Weekly:</strong> Cumulative weekly points → weekly pool (50%) split by leaderboard rank</li>
+  <li>Unused daily pool rolls into weekly pool</li>
+  <li>Multiple submitters on same project ALL get rewarded (signal/trade). DB saves: only new info.</li>
+  <li>Holdings affect signal weight (attention priority) AND point multiplier</li>
+</ul>
+
+<h3>Parameters</h3>
+<table>
+  <tr><th>Parameter</th><th>Test (GP)</th><th>Public</th></tr>
+  <tr><td>Duration</td><td>1 week</td><td>2 weeks</td></tr>
+  <tr><td>Participants</td><td>10 GPs</td><td>Broader (4 tiers)</td></tr>
+  <tr><td>Pool</td><td>1% = 1B tokens</td><td>1% = 1B (increase if positive)</td></tr>
+  <tr><td>Multipliers</td><td>None (flat)</td><td>Tier-based</td></tr>
+  <tr><td>Min hold</td><td>250M (GP)</td><td>2M (Tier 1)</td></tr>
+</table>
+
+<h4>FDV Scenarios</h4>
+<table>
+  <tr><th>FDV</th><th>Price/token</th><th>1B pool value</th></tr>
+  <tr><td>$1.2M</td><td>$0.000012</td><td>$12,000</td></tr>
+  <tr><td>$2.4M</td><td>$0.000024</td><td>$24,000</td></tr>
+  <tr><td>$6M</td><td>$0.000060</td><td>$60,000</td></tr>
+</table>
+
+<h3>Points Per Action</h3>
+<table>
+  <tr><th>Action</th><th>Base</th><th>T1 (1.0x)</th><th>T2 (1.5x)</th><th>T3 (3.0x)</th><th>GP (5.0x)</th></tr>
+  <tr><td>Rejected</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+  <tr><td>DB save</td><td>1</td><td>1</td><td>1.5</td><td>3</td><td>5</td></tr>
+  <tr><td>Signal</td><td>5</td><td>5</td><td>7.5</td><td>15</td><td>25</td></tr>
+  <tr><td>Trade</td><td>20</td><td>20</td><td>30</td><td>60</td><td>100</td></tr>
+</table>
+
+<h3>Tier Structure</h3>
+<table>
+  <tr><th>Tier</th><th>Min Hold</th><th>Entry $1.2M</th><th>Entry $2.4M</th><th>Entry $6M</th><th>Weight</th><th>Multiplier</th></tr>
+  <tr><td>Tier 1</td><td>2M</td><td>$24</td><td>$48</td><td>$120</td><td>Base</td><td>1.0x</td></tr>
+  <tr><td>Tier 2</td><td>10M</td><td>$120</td><td>$240</td><td>$600</td><td>Enhanced</td><td>1.5x</td></tr>
+  <tr><td>Tier 3</td><td>50M</td><td>$600</td><td>$1,200</td><td>$3,000</td><td>High</td><td>3.0x</td></tr>
+  <tr><td>GP</td><td>250M</td><td>$3,000</td><td>$6,000</td><td>$15,000</td><td>Maximum</td><td>5.0x</td></tr>
+</table>
+
+<div class="callout">
+  <p><strong>Transparency:</strong> Signal weight mechanic must be documented and visible. Publish formula + examples per tier. Opacity = broken trust.</p>
+</div>
+</section>
+
+<section id="econ-test">
+<h3>Test Season (1 week, 10 GPs, flat)</h3>
+
+<h4>Expected Volume</h4>
+<table>
+  <tr><th>Action</th><th>Per week</th></tr>
+  <tr><td>DB saves</td><td>~100</td></tr>
+  <tr><td>Signals</td><td>7-10</td></tr>
+  <tr><td>Trades</td><td>~3</td></tr>
+  <tr><td>Rejected</td><td>~80-120</td></tr>
+</table>
+
+<h4>GP Earnings (test, no multipliers, illustrative)</h4>
+<table>
+  <tr><th>GP Profile</th><th>Actions</th><th>Est. Daily</th><th>Est. Weekly Bonus</th><th>Total</th><th>$ at $1.2M</th></tr>
+  <tr><td>Top</td><td>15 DB + 3 Sig + 2 Trade</td><td>72.5M</td><td>209M (25%)</td><td>281M</td><td>$3,370</td></tr>
+  <tr><td>Good</td><td>12 DB + 1 Sig + 1 Trade</td><td>36M</td><td>125M (15%)</td><td>161M</td><td>$1,930</td></tr>
+  <tr><td>Average</td><td>8 DB</td><td>4M</td><td>84M (10%)</td><td>88M</td><td>$1,050</td></tr>
+  <tr><td>Low</td><td>3 DB</td><td>1.5M</td><td>40M (5%)</td><td>41.5M</td><td>$498</td></tr>
+</table>
+<p><em>These are illustrative under proportional model — actual payouts depend on total weighted points generated.</em></p>
+
+<h4>Sell Pressure (Test)</h4>
+<table>
+  <tr><th>Dump %</th><th>Tokens</th><th>$</th><th>vs FDV</th></tr>
+  <tr><td>30% (realistic)</td><td>255M</td><td>$3,060</td><td>0.26%</td></tr>
+  <tr><td>10% (likely — GPs aligned)</td><td>85M</td><td>$1,020</td><td>0.09%</td></tr>
+</table>
+<p>Negligible.</p>
+</section>
+
+<section id="econ-public">
+<h3>Public Season (2 weeks, 4 tiers)</h3>
+
+<h4>Volume Estimates</h4>
+<p>Multiple scouts can submit same project. If agent acts (signal/trade), ALL submitters rewarded.</p>
+<table>
+  <tr><th>Action</th><th>50 scouts</th><th>100 scouts</th><th>200 scouts</th></tr>
+  <tr><td>DB saves (unique new info)</td><td>200</td><td>350</td><td>500</td></tr>
+  <tr><td>Signals (unique projects)</td><td>10-15</td><td>15-20</td><td>20-30</td></tr>
+  <tr><td>Signal submitters total</td><td>30-50</td><td>50-80</td><td>80-120</td></tr>
+  <tr><td>Trades (unique projects)</td><td>4-6</td><td>6-10</td><td>8-12</td></tr>
+  <tr><td>Trade submitters total</td><td>10-20</td><td>20-35</td><td>30-50</td></tr>
+  <tr><td>Rejected</td><td>500+</td><td>1,200+</td><td>2,500+</td></tr>
+</table>
+
+<h4>5 Scouts Same Project → Signal (Example)</h4>
+<table>
+  <tr><th>Scout</th><th>Tier</th><th>Mult</th><th>Base pts</th><th>Weighted pts</th></tr>
+  <tr><td>GP #1</td><td>GP</td><td>5.0x</td><td>5</td><td>25</td></tr>
+  <tr><td>GP #2</td><td>GP</td><td>5.0x</td><td>5</td><td>25</td></tr>
+  <tr><td>Tier 3</td><td>T3</td><td>3.0x</td><td>5</td><td>15</td></tr>
+  <tr><td>Tier 2 (first)</td><td>T2</td><td>1.5x</td><td>5</td><td>7.5</td></tr>
+  <tr><td>Tier 1</td><td>T1</td><td>1.0x</td><td>5</td><td>5</td></tr>
+  <tr><td><strong>Total</strong></td><td></td><td></td><td></td><td><strong>77.5</strong></td></tr>
+</table>
+<p>Everyone rewarded. Tier 2 submitted first but GPs earn most per submission. Discovery bonus (post-MVP) would reward first submitter extra.</p>
+
+<h4>Per-Tier Earnings (2 weeks, $1.2M FDV, illustrative)</h4>
+
+<p><strong>Tier 1 (2M, $24 entry, 1.0x)</strong></p>
+<table>
+  <tr><th>Activity</th><th>Daily $</th><th>Weekly bonus</th><th>Total 2wk</th><th>ROI</th></tr>
+  <tr><td>Casual</td><td>$3-5</td><td>$50-100</td><td><strong>$90-170</strong></td><td>4-7x</td></tr>
+  <tr><td>Active</td><td>$5-10</td><td>$100-200</td><td><strong>$170-340</strong></td><td>7-14x</td></tr>
+  <tr><td>Lucky (signal→trade)</td><td>$15+</td><td>$200+</td><td><strong>$500+</strong></td><td>20x+</td></tr>
+</table>
+
+<p><strong>Tier 2 (10M, $120 entry, 1.5x)</strong></p>
+<table>
+  <tr><th>Activity</th><th>Daily $</th><th>Weekly bonus</th><th>Total 2wk</th><th>ROI</th></tr>
+  <tr><td>Casual</td><td>$4-7</td><td>$75-150</td><td><strong>$130-250</strong></td><td>1-2x</td></tr>
+  <tr><td>Active</td><td>$8-15</td><td>$150-300</td><td><strong>$260-510</strong></td><td>2-4x</td></tr>
+  <tr><td>Lucky</td><td>$22+</td><td>$300+</td><td><strong>$750+</strong></td><td>6x+</td></tr>
+</table>
+
+<p><strong>Tier 3 (50M, $600 entry, 3.0x)</strong></p>
+<table>
+  <tr><th>Activity</th><th>Daily $</th><th>Weekly bonus</th><th>Total 2wk</th><th>ROI</th></tr>
+  <tr><td>Casual</td><td>$9-15</td><td>$150-300</td><td><strong>$275-510</strong></td><td>0.5-0.9x</td></tr>
+  <tr><td>Active</td><td>$15-30</td><td>$300-600</td><td><strong>$510-1,020</strong></td><td>0.9-1.7x</td></tr>
+  <tr><td>Lucky</td><td>$45+</td><td>$600+</td><td><strong>$1,500+</strong></td><td>2.5x+</td></tr>
+</table>
+
+<p><strong>GP (250M, $3K entry, 5.0x)</strong></p>
+<table>
+  <tr><th>Activity</th><th>Daily $</th><th>Weekly bonus</th><th>Total 2wk</th><th>ROI</th></tr>
+  <tr><td>Casual</td><td>$15-25</td><td>$250-500</td><td><strong>$460-850</strong></td><td>0.15-0.28x</td></tr>
+  <tr><td>Active</td><td>$25-50</td><td>$500-1K</td><td><strong>$850-1,700</strong></td><td>0.28-0.57x</td></tr>
+  <tr><td>Lucky</td><td>$75+</td><td>$1K+</td><td><strong>$2,500+</strong></td><td>0.8x+</td></tr>
+</table>
+<p><em>GP ROI comes from token appreciation, not just rewards.</em></p>
+
+<h4>Key Takeaway Per Tier</h4>
+<table>
+  <tr><th>Tier</th><th>Entry</th><th>2wk (active)</th><th>ROI</th><th>Value</th></tr>
+  <tr><td>T1</td><td>$24</td><td>$170-340</td><td>7-14x</td><td>Accessible, high ROI, recruit masses</td></tr>
+  <tr><td>T2</td><td>$120</td><td>$260-510</td><td>2-4x</td><td>Sweet spot: good ROI + real $</td></tr>
+  <tr><td>T3</td><td>$600</td><td>$510-1,020</td><td>0.9-1.7x</td><td>Serious players, break-even+</td></tr>
+  <tr><td>GP</td><td>$3,000</td><td>$850-1,700</td><td>0.3-0.6x</td><td>Whales: ROI from token price</td></tr>
+</table>
+</section>
+
+<section id="econ-price">
+<h3>Price Impact Analysis</h3>
+
+<p>FAIR/WETH on Uniswap V3 (Base): ~50 ETH. Active range ~$60-70K effective liquidity.</p>
+
+<table>
+  <tr><th>New scouts (2wk)</th><th>Avg buy</th><th>Buy $</th><th>Impact</th><th>New FDV</th></tr>
+  <tr><td>30</td><td>$120</td><td>$3,600</td><td>~2.8%</td><td>$1.23M</td></tr>
+  <tr><td>50</td><td>$180</td><td>$9,000</td><td>~6.9%</td><td>$1.28M</td></tr>
+  <tr><td>100</td><td>$200</td><td>$20,000</td><td>~15.4%</td><td>$1.38M</td></tr>
+  <tr><td>200</td><td>$300</td><td>$60,000</td><td>~46%</td><td>$1.75M</td></tr>
+  <tr><td>500</td><td>$400</td><td>$200,000</td><td>~154% → 2x</td><td>$2.4-3M</td></tr>
+</table>
+
+<p><strong>At thin V3 liquidity, scout adoption directly moves price.</strong> 100 scouts = ~15%. 500 = 2x+.</p>
+
+<pre>
+Scouts buy to enter → price up →
+Existing scouts hold (worth more) →
+Less sell pressure → price holds →
+More attention → more scouts → repeat
+</pre>
+
+<h4>Breaking Point</h4>
+<p>Max sell from rewards: 1B pool × $0.000012 × 70% sell = $8,400 over 2 weeks.</p>
+<p>Need buy pressure > $8,400 → need ~47 new scouts at $180 avg buy.</p>
+<p>Below = slow bleed. Above = flywheel.</p>
+</section>
+
+<section id="econ-leaderboard">
+<h3>Weekly Leaderboard</h3>
+
+<p>250M tokens/week (50% of weekly allocation, or more with daily rollover).</p>
+
+<table>
+  <tr><th>Rank</th><th>% of Pool</th><th>At 250M base</th><th>At ~400M (rollover)</th></tr>
+  <tr><td>#1</td><td>25%</td><td>62.5M ($750)</td><td>100M ($1,200)</td></tr>
+  <tr><td>#2</td><td>18%</td><td>45M ($540)</td><td>72M ($864)</td></tr>
+  <tr><td>#3</td><td>13%</td><td>32.5M ($390)</td><td>52M ($624)</td></tr>
+  <tr><td>#4-5</td><td>10% each</td><td>25M ($300)</td><td>40M ($480)</td></tr>
+  <tr><td>#6-10</td><td>4.8% each</td><td>12M ($144)</td><td>19.2M ($230)</td></tr>
+</table>
+</section>
+
+<section id="econ-retention">
+<h3>Scout Incentive to Hold</h3>
+
+<table>
+  <tr><th>Action</th><th>Immediate</th><th>Next Season</th></tr>
+  <tr><td>Sell all rewards</td><td>Get $ now</td><td>Same tier, same multiplier</td></tr>
+  <tr><td>Hold all rewards</td><td>No $ now</td><td>Move up tier → higher multiplier → earn more</td></tr>
+</table>
+
+<h4>Tier Upgrade Math</h4>
+<table>
+  <tr><th>From → To</th><th>Tokens needed</th><th>Cost at $1.2M</th><th>Benefit</th></tr>
+  <tr><td>T1 → T2</td><td>8M more</td><td>$96</td><td>1.5x rewards + enhanced weight</td></tr>
+  <tr><td>T2 → T3</td><td>40M more</td><td>$480</td><td>3.0x rewards + high weight</td></tr>
+  <tr><td>T3 → GP</td><td>200M more</td><td>$2,400</td><td>5.0x rewards + maximum weight</td></tr>
+</table>
+<p>Realistic path: T1 plays 2-3 seasons holding → T2. Then 4-5 seasons → approaches GP.</p>
+</section>
+
+<section id="econ-scenarios">
+<h3>Bear / Normal / Bull (Public, 2 weeks)</h3>
+
+<h4>At FDV $1.2M, 1% pool ($12,000)</h4>
+<table>
+  <tr><th>Metric</th><th>Bear</th><th>Normal</th><th>Bull</th></tr>
+  <tr><td>New scouts</td><td>20</td><td>50</td><td>200</td></tr>
+  <tr><td>Avg buy</td><td>$100</td><td>$180</td><td>$300</td></tr>
+  <tr><td><strong>Buy pressure</strong></td><td>$2,000</td><td><strong>$9,000</strong></td><td>$60,000</td></tr>
+  <tr><td>Rewards paid</td><td>$8,000</td><td>$10,000</td><td>$12,000</td></tr>
+  <tr><td>Sell %</td><td>70%</td><td>50%</td><td>30%</td></tr>
+  <tr><td><strong>Sell pressure</strong></td><td>$5,600</td><td><strong>$5,000</strong></td><td>$3,600</td></tr>
+  <tr><td><strong>Net</strong></td><td class="rh">-$3,600</td><td class="rl"><strong>+$4,000</strong></td><td class="rl">+$56,400</td></tr>
+</table>
+
+<h4>At FDV $2.4M, 1% pool ($24,000)</h4>
+<table>
+  <tr><th>Metric</th><th>Bear</th><th>Normal</th><th>Bull</th></tr>
+  <tr><td>Buy pressure</td><td>$4,000</td><td>$18,000</td><td>$120,000</td></tr>
+  <tr><td>Sell pressure</td><td>$11,200</td><td>$10,000</td><td>$7,200</td></tr>
+  <tr><td><strong>Net</strong></td><td class="rh">-$7,200</td><td class="rl"><strong>+$8,000</strong></td><td class="rl">+$112,800</td></tr>
+</table>
+
+<h4>At FDV $6M, 1% pool ($60,000)</h4>
+<table>
+  <tr><th>Metric</th><th>Bear</th><th>Normal</th><th>Bull</th></tr>
+  <tr><td>Buy pressure</td><td>$10,000</td><td>$45,000</td><td>$300,000</td></tr>
+  <tr><td>Sell pressure</td><td>$28,000</td><td>$25,000</td><td>$18,000</td></tr>
+  <tr><td><strong>Net</strong></td><td class="rh">-$18,000</td><td class="rl"><strong>+$20,000</strong></td><td class="rl">+$282,000</td></tr>
+</table>
+
+<p>Bear always negative — that's what bear means. At 1% pool: bear burns 0.3% FDV per season. Survivable for many seasons.</p>
+
+<h4>Sybil Check</h4>
+<table>
+  <tr><th>Tier</th><th>Entry</th><th>Break-even DB saves</th><th>Break-even signals</th><th>Verdict</th></tr>
+  <tr><td>T1</td><td>$24</td><td>4 accepted</td><td>&lt;1</td><td>Marginal — agent quality is defense</td></tr>
+  <tr><td>T2</td><td>$120</td><td>~13</td><td>~2</td><td>Not easily farmable</td></tr>
+  <tr><td>T3</td><td>$600</td><td>~33</td><td>~3</td><td>Not farmable at scale</td></tr>
+  <tr><td>GP</td><td>$3,000</td><td>—</td><td>—</td><td>Economically irrational to sybil</td></tr>
+</table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============================================================ -->
+<!-- RISK MATRIX -->
+<!-- ============================================================ -->
+<section id="risks">
+<h2><span class="num">R —</span> Risk Matrix</h2>
+
+<table>
+  <tr><th>Risk</th><th>Probability</th><th>Impact</th><th>Priority</th></tr>
+  <tr><td>Evaluation pipeline quality</td><td><span class="rh">High</span></td><td><span class="rh">Critical</span></td><td>Dedicated design session (Section 1b)</td></tr>
+  <tr><td>X API price increase</td><td><span class="rh">High</span></td><td><span class="rm">Medium</span></td><td>Abstract API layer</td></tr>
+  <tr><td>Scout spam → X penalties</td><td><span class="rm">Medium</span></td><td><span class="rh">High</span></td><td>Guidelines + rate limits</td></tr>
+  <tr><td>Sybil (test)</td><td><span class="rl">Low</span></td><td><span class="rl">Low</span></td><td>250M threshold</td></tr>
+  <tr><td>Sybil (public)</td><td><span class="rm">Medium</span></td><td><span class="rm">Medium</span></td><td>Economic modeling + monitoring</td></tr>
+  <tr><td>Signal poisoning / prompt hacking</td><td><span class="rm">Medium</span></td><td><span class="rh">High</span></td><td>Multi-signal verification, anti-gaming</td></tr>
+  <tr><td>Legal (P&L rewards)</td><td><span class="rm">Low-Med</span></td><td><span class="rh">Very High</span></td><td>Parked — legal opinion pre-scale</td></tr>
+  <tr><td>Reward dilution</td><td><span class="rm">Medium</span></td><td><span class="rm">Medium</span></td><td>Monitor per-point value + adjust pool</td></tr>
+  <tr><td>Bad trade from scout signal</td><td><span class="rm">Medium</span></td><td><span class="rh">High</span></td><td>Position limits + override window</td></tr>
+  <tr><td>X account suspension</td><td><span class="rl">Low</span></td><td><span class="rh">Critical</span></td><td>Multi-platform design (Farcaster fallback)</td></tr>
+  <tr><td>Scout fatigue / churn</td><td><span class="rh">High</span></td><td><span class="rm">Medium</span></td><td>Gamification + seasons + visible rewards</td></tr>
+</table>
+</section>
+
+<section id="parked">
+<h3>Parked Items</h3>
+<table>
+  <tr><th>Item</th><th>Status</th><th>Blocker</th></tr>
+  <tr><td>P&L-linked rewards</td><td>Parked</td><td>Legal review</td></tr>
+  <tr><td>PNL Track Record multiplier</td><td>Future</td><td>Not MVP — extra tier bonus later</td></tr>
+  <tr><td>Agent evaluation time</td><td>TBD</td><td>Design session needed</td></tr>
+  <tr><td>Dynamic rate reduction</td><td>Post-test</td><td>Add if bear persists</td></tr>
+  <tr><td>Discovery bonus</td><td>Post-MVP</td><td>Needs duplicate detection</td></tr>
+  <tr><td>Streak bonus</td><td>Post-MVP</td><td>Retention mechanic</td></tr>
+  <tr><td>Pioneer multiplier</td><td>Post-MVP</td><td>S1 permanent bonus</td></tr>
+  <tr><td>Hold duration multiplier</td><td>S2+</td><td>Tier system sufficient for MVP</td></tr>
+</table>
+</section>
+
+<div style="height: 120px;"></div>
+</main>
+
+<script>
+mermaid.initialize({ 
+  startOnLoad: true, 
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#1c1e2e',
+    primaryBorderColor: '#8b5cf6',
+    primaryTextColor: '#e4e4e7',
+    lineColor: '#8b5cf6',
+    secondaryColor: '#161822',
+    tertiaryColor: '#0f1117'
+  }
+});
+
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.sidebar a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if (pageYOffset >= s.offsetTop - 80) current = s.id; });
+  navLinks.forEach(l => {
+    l.classList.remove('active');
+    if (l.getAttribute('href') === '#' + current) l.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

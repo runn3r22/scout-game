@@ -1,0 +1,60 @@
+{
+  "_comment": "Token factory registry — maps deployer contract patterns to factory names. Add new launchpads by adding entries here.",
+  "_updated": "2026-03-17",
+  "factories": [
+    {
+      "name": "clanker",
+      "display_name": "Clanker",
+      "chain": "base",
+      "deployer_addresses": [],
+      "has_fee_mechanism": true,
+      "fee_check_method": "clanker_api",
+      "notes": "Check factory_fees_claimed. Claimed = active creator. Unclaimed >7d = possible bot/abandoned."
+    },
+    {
+      "name": "bankr",
+      "display_name": "Bankr",
+      "chain": "base",
+      "deployer_addresses": [],
+      "has_fee_mechanism": false,
+      "fee_check_method": null,
+      "notes": "Context only. No fee mechanism to check."
+    },
+    {
+      "name": "flaunch",
+      "display_name": "Flaunch",
+      "chain": "base",
+      "deployer_addresses": [],
+      "has_fee_mechanism": false,
+      "fee_check_method": null,
+      "notes": "Flaunch token factory on Base."
+    },
+    {
+      "name": "virtuals",
+      "display_name": "Virtuals Protocol",
+      "chain": "base",
+      "deployer_addresses": [],
+      "has_fee_mechanism": false,
+      "fee_check_method": null,
+      "notes": "AI agent token factory. Bonding curve launch mechanic."
+    },
+    {
+      "name": "noice",
+      "display_name": "Noice",
+      "chain": "base",
+      "deployer_addresses": [],
+      "has_fee_mechanism": false,
+      "fee_check_method": null,
+      "notes": "Noice launchpad on Base."
+    },
+    {
+      "name": "creator_bid",
+      "display_name": "Creator Bid (Aerodrome)",
+      "chain": "base",
+      "deployer_addresses": [],
+      "has_fee_mechanism": false,
+      "fee_check_method": null,
+      "notes": "Aerodrome-based token creation. Check LP structure."
+    }
+  ]
+}

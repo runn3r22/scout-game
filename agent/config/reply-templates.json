@@ -1,0 +1,30 @@
+{
+  "$comment": "Reply templates for scout evaluation outcomes. GP test (S0) — Telegram.",
+
+  "gp_test": {
+    "no_ca": null,
+    "structural_no_ca": "no CA detected.",
+    "structural_not_trading": "[CA_SHORT] isn't showing active trading. verify the address.",
+    "structural_out_of_range": "[TICKER] is outside our evaluation range.",
+    "structural_too_old": "[TICKER] is outside our evaluation range.",
+    "structural_rate_limit": "rate limit reached (5/day). back tomorrow.",
+    "structural_duplicate": "[TICKER] already submitted today.",
+    "structural_banned": null,
+    "reject": "evaluated [TICKER]. doesn't meet our threshold.",
+    "duplicate_no_new_info": "we already have [TICKER]. submit new intel to update our view.",
+    "db_save": "[TICKER] — logged. watching.",
+    "signal": "[TICKER] — logged. watching.",
+    "trade": "[TICKER] — logged. watching."
+  },
+
+  "s1_x": {
+    "receipt": "signal received. evaluating.",
+    "reject": "evaluated [TICKER]. doesn't meet our threshold.",
+    "reject_no_ca": "need a contract address to evaluate. tag us again with the CA.",
+    "reject_not_trading": "[CA_SHORT] isn't showing active trading. verify the address and try again.",
+    "reject_out_of_range": "[TICKER] is outside our evaluation range.",
+    "reject_rate_limit": "you've hit the daily limit. back tomorrow.",
+    "reject_duplicate": "[TICKER] is already in our database. submit again if you have new intel.",
+    "logged": "[TICKER] — saved to our intel database. follow @fairvc to see which signals make the cut."
+  }
+}
