@@ -43,7 +43,7 @@ sudo jq '
       "schedule": "0 1 * * *",
       "sessionTarget": "isolated",
       "model": "openrouter/auto",
-      "task": "Compile daily digest: today\'s evaluations summary, acceptance rate, notable scores, points settlement. Post to team review channel."
+      "task": "Compile daily digest: todays evaluations summary, acceptance rate, notable scores, points settlement. Post to team review channel."
     },
     {
       "id": "retroactive-upgrade",
