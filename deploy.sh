@@ -34,18 +34,70 @@ sudo jq '
   }
 ' "$CONFIG" > /tmp/openclaw_patched.json && sudo mv /tmp/openclaw_patched.json "$CONFIG"
 
-echo "→ Registering cron jobs..."
-openclaw cron delete fdv-snapshot 2>/dev/null || true
-openclaw cron delete daily-digest 2>/dev/null || true
-openclaw cron delete retroactive-upgrade 2>/dev/null || true
+echo "→ Writing cron jobs to jobs.json..."
+CRON_DIR="/home/openclawrun/.openclaw/cron"
+sudo mkdir -p "$CRON_DIR"
 
-openclaw cron add --name fdv-snapshot --schedule "0 0 * * *" --session-target isolated \
-  --task "Pull current FDV for all SIGNAL/TRADE tokens from GeckoTerminal and update token_performance table in Supabase. Calculate 1d/7d/14d performance vs signal-time FDV."
-
-openclaw cron add --name daily-digest --schedule "0 1 * * *" --session-target isolated \
-  --task "Compile daily digest: todays evaluations summary, acceptance rate, notable scores, points settlement. Post to team review channel."
-
-openclaw cron add --name retroactive-upgrade --schedule "0 2 * * *" --session-target isolated \
-  --task "Check all DB_SAVE tokens from last 14 days against any SIGNAL/TRADE actions from any pipeline. If match found, retroactively upgrade original scout points and log to digest."
+sudo tee "$CRON_DIR/jobs.json" > /dev/null << 'EOF'
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "fdv-snapshot",
+      "name": "fdv-snapshot",
+      "enabled": true,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 0 * * *"
+      },
+      "sessionTarget": "isolated",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Pull current FDV for all SIGNAL/TRADE tokens from GeckoTerminal and update token_performance table in Supabase. Calculate 1d/7d/14d performance vs signal-time FDV.",
+        "timeoutSeconds": 900
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    },
+    {
+      "id": "daily-digest",
+      "name": "daily-digest",
+      "enabled": true,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 1 * * *"
+      },
+      "sessionTarget": "isolated",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Compile daily digest: todays evaluations summary, acceptance rate, notable scores, points settlement. Post to team review channel.",
+        "timeoutSeconds": 900
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    },
+    {
+      "id": "retroactive-upgrade",
+      "name": "retroactive-upgrade",
+      "enabled": true,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 2 * * *"
+      },
+      "sessionTarget": "isolated",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Check all DB_SAVE tokens from last 14 days against any SIGNAL/TRADE actions from any pipeline. If match found, retroactively upgrade original scout points and log to digest.",
+        "timeoutSeconds": 900
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    }
+  ]
+}
+EOF
 
 echo "✓ Done. Config changes apply automatically (hybrid hot-reload)."
