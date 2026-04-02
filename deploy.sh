@@ -56,6 +56,13 @@ sudo jq '
 ' "$CONFIG" > /tmp/openclaw_patched.json && sudo mv /tmp/openclaw_patched.json "$CONFIG"
 
 echo "→ Restarting OpenClaw..."
-openclaw restart
+# Try systemctl first, fall back to process kill
+if systemctl is-active --quiet openclaw 2>/dev/null; then
+  sudo systemctl restart openclaw
+elif pgrep -f "openclaw" > /dev/null; then
+  pkill -f "openclaw" && sleep 2 && openclaw start &
+else
+  echo "  OpenClaw process not found — start it manually"
+fi
 
 echo "✓ Done."
