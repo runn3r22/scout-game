@@ -20,9 +20,17 @@ Daily weighted-points cap: **50 per scout**.
 
 **GP Test (S0):** Telegram messages in scout group. Valid submission = CA (0x, 42 chars) + thesis. No CA = not a submission, ignore silently.
 
+## Supabase Mode
+
+**TEMPORARY — GP test only. Remove when Supabase credentials are configured.**
+
+**If Supabase is unavailable or not configured:** run in NO-DB mode. Skip all DB reads/writes. Treat every CA as new discovery. Log evaluation result to daily notes (`memory/YYYY-MM-DD.md`). Reply to scout as normal. Alert team via Telegram for SIGNAL/TRADE. Do NOT attempt to connect to Supabase — if credentials are missing, proceed immediately in NO-DB mode without retrying.
+
+**Never use the `openclaw` CLI tool** — it is not available inside agent sessions. Do not attempt to run shell commands to check gateway status.
+
 ## Evaluation Pipeline
 
-Run steps in order. Exit early on rejection. **Write receipt to Supabase at Step 1** (submission_id, scout_id, CA, submitted_at, status="pending").
+Run steps in order. Exit early on rejection. **If Supabase available:** write receipt at Step 1 (submission_id, scout_id, CA, submitted_at, status="pending"). **If NO-DB mode:** skip, proceed to structural filter immediately.
 
 ### Step 1: Structural Filter
 | Condition | Code |
@@ -46,10 +54,12 @@ Score thesis 1-10. Gate at < 4 → `THESIS_WEAK`. Rubric: specificity, informati
 **Read `skills/snapshot-interpretation/SKILL.md`.** Market data, liquidity ratio, concentration, convergence. `UNVERIFIED_LAUNCH` → contract check.
 
 ### Step 4: DB Context Check
-Query Supabase `projects` and `agent_memory`:
+**If Supabase available:** Query `projects` and `agent_memory`:
 - **Existing + new info** → fresh eval. Do NOT read previous score until AFTER Step 5 completes. Then compare and note the delta.
 - **Existing + no new info** → `DUPLICATE`
 - **New** → `is_new_discovery`
+
+**If NO-DB mode:** skip. Treat as `is_new_discovery`. Continue to Step 5.
 
 ### Step 5: Deep Token Analysis
 **Read `skills/deep-analysis/SKILL.md`.** Score 5 dimensions:
@@ -59,7 +69,7 @@ Builder/Team 0-4, Product 0-2, On-chain 0-2, Market 0-1, Narrative 0-2. Max raw 
 `token_score = (raw_score / 11) × 10` — raw sum, no multiplier. Builder/Team's importance comes from its wider 0-4 range.
 
 ### Step 6: Final Score + Output
-**Read `skills/evaluation-output/SKILL.md`.** Apply modifiers, write JSON to Supabase, send replies, alert team.
+**Read `skills/evaluation-output/SKILL.md`.** Apply modifiers, send replies, alert team. **If Supabase available:** write JSON to DB. **If NO-DB mode:** write result to daily notes instead.
 
 Modifiers: scout reputation (+0.3/+0.5), thesis 8+ (+0.3), new discovery (+0.2), convergence (+0.3/scout), LOW_LIQUIDITY (-0.5), HIGH_CONCENTRATION (-0.5), DEPLOYER_SELLING (-1.0), COORDINATED (-1.0), FDV ceiling (-0.5), UNVERIFIED red flags (-0.5). Floor 0, ceiling 10.
 
@@ -74,9 +84,10 @@ SIGNAL/TRADE → also alert team review channel (format in `evaluation-output` s
 ## Tool Usage
 - **GeckoTerminal / BaseScan**: Step 3. Clanker fee claim status checked via BaseScan transaction history.
 - **factory-registry.json**: read in Step 1 (not auto-injected)
-- **Supabase**: Step 1 (receipt), Step 4, output
+- **Supabase**: Step 1 (receipt), Step 4, output — skip entirely if NO-DB mode
 - **Web/X search**: Step 5 builder research only
 - **Telegram**: replies after evaluation
+- **No CLI tools**: never run `openclaw`, `bash`, or shell commands
 
 Minimize calls. Batch where possible.
 
