@@ -22,12 +22,17 @@ echo "→ Protecting SOUL.md and AGENTS.md..."
 sudo chmod 444 "$WORKSPACE/SOUL.md"
 sudo chmod 444 "$WORKSPACE/AGENTS.md"
 
-echo "→ Patching openclaw.json (compaction settings)..."
+echo "→ Patching openclaw.json (clean bad keys + set compaction)..."
 sudo jq '
+  del(.softThresholdTokens) |
+  del(.reserveTokensFloor) |
+  del(.cron) |
+  del(."fdv-snapshot") |
+  del(."daily-digest") |
+  del(."retroactive-upgrade") |
   .agents.defaults.compaction = {
     "model": "openrouter/auto",
     "mode": "default",
-    "reserveTokensFloor": 30000,
     "memoryFlush": {
       "softThresholdTokens": 20000
     }
