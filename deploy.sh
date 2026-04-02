@@ -28,31 +28,26 @@ sudo jq '
     "model": "openrouter/auto",
     "mode": "default"
   } |
-  .softThresholdTokens = 20000 |
-  .reserveTokensFloor = 30000 |
-  .cron = [
-    {
-      "id": "fdv-snapshot",
+  .cron = {
+    "fdv-snapshot": {
       "schedule": "0 0 * * *",
       "sessionTarget": "isolated",
       "model": "openrouter/auto",
       "task": "Pull current FDV for all SIGNAL/TRADE tokens from GeckoTerminal and update token_performance table in Supabase. Calculate 1d/7d/14d performance vs signal-time FDV."
     },
-    {
-      "id": "daily-digest",
+    "daily-digest": {
       "schedule": "0 1 * * *",
       "sessionTarget": "isolated",
       "model": "openrouter/auto",
       "task": "Compile daily digest: todays evaluations summary, acceptance rate, notable scores, points settlement. Post to team review channel."
     },
-    {
-      "id": "retroactive-upgrade",
+    "retroactive-upgrade": {
       "schedule": "0 2 * * *",
       "sessionTarget": "isolated",
       "model": "openrouter/auto",
       "task": "Check all DB_SAVE tokens from last 14 days against any SIGNAL/TRADE actions from any pipeline. If match found, retroactively upgrade original scout points and log to digest."
     }
-  ]
+  }
 ' "$CONFIG" > /tmp/openclaw_patched.json && sudo mv /tmp/openclaw_patched.json "$CONFIG"
 
 echo "✓ Done. Config changes apply automatically (hybrid hot-reload)."
