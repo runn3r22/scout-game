@@ -15,11 +15,27 @@
 - For `UNVERIFIED_LAUNCH` tokens: check contract source for mint functions, owner privileges, proxy patterns
 
 ## Supabase
-- Shared with Farcaster pipeline — same `projects` and `agent_memory` tables
-- Read: project existence, existing scores, previous submissions for same CA
-- Write: submission receipt (Step 1), evaluation results, intel summaries
-- Every DB_SAVE or higher writes to both `projects` and `agent_memory`
-- **Write receipt at Step 1** — compaction protection
+
+S0 GP test uses an isolated test Supabase project (separate from main Fair infra). Schema in `supabase/schema.sql`. Credentials via env vars `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`.
+
+Three tables:
+
+**`scout_submissions`** — every submission attempt
+- Step 1 INSERT: id, scout_id, scout_handle, ca, source_message, submitted_at, status='pending'
+- Step 3 UPDATE: snapshot_json
+- Step 6 UPDATE: thesis_score, token_score, final_score, modifiers_json, action, reasoning, points_awarded, evaluated_at, status='done'
+- On reject: status='done', reject_code='...'
+- **Always write receipt at Step 1** — compaction protection
+
+**`projects`** — one row per unique CA
+- Step 4 SELECT by ca: dedup + read existing notes
+- Step 6 UPSERT: ca, ticker, factory, last_seen_at, latest_action, latest_score, submission_count++, append to notes (with timestamp)
+- On first submission: also set first_seen_at, first_scout_id, first_submission_id
+
+**`scout_points`** — one row per scout, flat counter
+- Step 6 UPSERT: scout_id, scout_handle, total_points += points_awarded, submission_count++, accepted_count++ (if not REJECT), signal_count++ (if SIGNAL or TRADE), trade_count++ (if TRADE), last_submission_at
+
+`agent_memory` does NOT exist in S0 schema — see `docs/future-ideas.md` for the S1 plan to integrate with main Fair Supabase.
 
 ## factory-registry.json
 - Workspace config file at `config/factory-registry.json` — NOT auto-injected

@@ -1,0 +1,18 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local Claude/Cursor settings (already in repo as .claude/settings.local.json — leave alone)

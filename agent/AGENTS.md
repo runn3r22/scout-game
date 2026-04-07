@@ -6,31 +6,33 @@ Base tokens only. FDV >$50K and <$20M. Launched <30 days. Has active LP on Gecko
 
 ## Decision Authority
 
-| Final Score | Action | Points | Review |
-|-------------|--------|--------|--------|
-| < 4.0 | REJECT | 0 | Auto — no DB write |
-| 4.0 - 6.4 | DB_SAVE | 1 | Auto — saves to DB, logged in digest |
-| 6.5 - 7.9 | SIGNAL | 5 | **Team approval required** via Telegram |
-| 8.0 - 10.0 | TRADE | 20 | **Team approval required** via Telegram |
+| Final Score | Action   | Points | Review                                |
+|-------------|----------|--------|---------------------------------------|
+| < 4.0       | REJECT   | 0      | Auto — no DB write                    |
+| 4.0 - 6.4   | DB_SAVE  | 1      | Auto — saves to DB, logged in digest  |
+| 6.5 - 7.9   | SIGNAL   | 5      | **Team approval required** via Telegram |
+| 8.0 - 10.0  | TRADE    | 20     | **Team approval required** via Telegram |
 
-SIGNAL and TRADE require explicit team approval. No auto-publish. No timeout-based auto-approval.
-Daily weighted-points cap: **50 per scout**.
+Points are flat. No tier multipliers in S0. SIGNAL and TRADE require explicit team approval. No auto-publish. No timeout-based auto-approval. **No daily cap** in S0 — submit as much as you want.
 
 ## Input
 
 **GP Test (S0):** Telegram messages in scout group. Valid submission = CA (0x, 42 chars) + thesis. No CA = not a submission, ignore silently.
 
-## Supabase Mode
+## Supabase
 
-**TEMPORARY — GP test only. Remove when Supabase credentials are configured.**
+**S0 GP test uses a dedicated test Supabase project**, isolated from main Fair infra. Schema in `supabase/schema.sql`. Three tables:
+- `scout_submissions` — every submission attempt, status, scoring, decision
+- `projects` — one row per unique CA, dedup + accumulated notes
+- `scout_points` — one row per scout, flat point counter
 
-**If Supabase is unavailable or not configured:** run in NO-DB mode. Skip all DB reads/writes. Treat every CA as new discovery. Log evaluation result to daily notes (`memory/YYYY-MM-DD.md`). Reply to scout as normal. Alert team via Telegram for SIGNAL/TRADE. Do NOT attempt to connect to Supabase — if credentials are missing, proceed immediately in NO-DB mode without retrying.
+Credentials provided via env vars `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`. Use the service key (bypasses RLS). Never log credentials.
 
 **Never use the `openclaw` CLI tool** — it is not available inside agent sessions. Do not attempt to run shell commands to check gateway status.
 
 ## Evaluation Pipeline
 
-Run steps in order. Exit early on rejection. **If Supabase available:** write receipt at Step 1 (submission_id, scout_id, CA, submitted_at, status="pending"). **If NO-DB mode:** skip, proceed to structural filter immediately.
+Run steps in order. Exit early on rejection. **Write receipt at Step 1** to `scout_submissions` (id, scout_id, scout_handle, ca, submitted_at, source_message, status='pending') — compaction protection.
 
 ### Step 1: Structural Filter
 | Condition | Code |
@@ -41,7 +43,6 @@ Run steps in order. Exit early on rejection. **If Supabase available:** write re
 | FDV < $50K or > $20M | `OUT_OF_RANGE` |
 | Age > 30 days | `TOO_OLD` |
 | No LP | `NO_LP` |
-| Scout >= 5/day | `RATE_LIMIT` |
 | Duplicate CA in 24h, no new info | `DUPLICATE` |
 | Banned | `BANNED` |
 
@@ -56,12 +57,12 @@ Score thesis 1-10. Gate at < 4 → `THESIS_WEAK`. Rubric: specificity, informati
 **Read `skills/snapshot-interpretation/SKILL.md`.** Market data, liquidity ratio, concentration, convergence. `UNVERIFIED_LAUNCH` → contract check.
 
 ### Step 4: DB Context Check
-**If Supabase available:** Query `projects` and `agent_memory`:
-- **Existing + new info** → fresh eval. Do NOT read previous score until AFTER Step 5 completes. Then compare and note the delta.
+Query `projects` table by `ca`:
+- **Existing + new info in submission** → fresh eval. Do NOT read `latest_score` or `notes` until AFTER Step 5 completes. Then compare and note the delta.
 - **Existing + no new info** → `DUPLICATE`
 - **New** → `is_new_discovery`
 
-**If NO-DB mode:** skip. Treat as `is_new_discovery`. Continue to Step 5.
+Note: S0 test Supabase has no historical data from other Fair pipelines. The only history is what this agent itself has written. `agent_memory` does not exist in S0 schema — see `docs/future-ideas.md` for the S1 plan.
 
 ### Step 5: Deep Token Analysis
 **Read `skills/deep-analysis/SKILL.md`.** Score 5 dimensions:
@@ -71,9 +72,11 @@ Builder/Team 0-4, Product 0-2, On-chain 0-2, Market 0-1, Narrative 0-2. Max raw 
 `token_score = (raw_score / 11) × 10` — raw sum, no multiplier. Builder/Team's importance comes from its wider 0-4 range.
 
 ### Step 6: Final Score + Output
-**Read `skills/evaluation-output/SKILL.md`.** Apply modifiers, send replies, alert team. **If Supabase available:** write JSON to DB. **If NO-DB mode:** write result to daily notes instead.
+**Read `skills/evaluation-output/SKILL.md`.** Apply modifiers, write to Supabase, send replies, alert team for SIGNAL/TRADE.
 
-Modifiers: scout reputation (+0.3/+0.5), thesis 8+ (+0.3), new discovery (+0.2), convergence (+0.3/scout), LOW_LIQUIDITY (-0.5), HIGH_CONCENTRATION (-0.5), DEPLOYER_SELLING (-1.0), COORDINATED (-1.0), FDV ceiling (-0.5), UNVERIFIED red flags (-0.5). Floor 0, ceiling 10.
+Modifiers (S0 active): thesis 8+ (+0.3), new discovery (+0.2), LOW_LIQUIDITY (-0.5), HIGH_CONCENTRATION (-0.5), DEPLOYER_SELLING (-1.0), COORDINATED (-1.0), FDV ceiling (-0.5), UNVERIFIED red flags (-0.5). Floor 0, ceiling 10.
+
+Modifiers cut from S0 (see `docs/future-ideas.md`): scout reputation (+0.3/+0.5), convergence (+0.3/scout).
 
 ---
 
@@ -86,7 +89,7 @@ SIGNAL/TRADE → also alert team review channel (format in `evaluation-output` s
 ## Tool Usage
 - **GeckoTerminal / BaseScan**: Step 3. Clanker fee claim status checked via BaseScan transaction history.
 - **factory-registry.json**: read in Step 1 (not auto-injected)
-- **Supabase**: Step 1 (receipt), Step 4, output — skip entirely if NO-DB mode
+- **Supabase**: Step 1 (receipt), Step 4 (dedup/context), Step 6 (write final result + projects upsert + scout_points increment)
 - **Web/X search**: Step 5 builder research only
 - **Telegram**: replies after evaluation
 - **No CLI tools**: never run `openclaw`, `bash`, or shell commands
@@ -98,10 +101,10 @@ Hourly batches. Fresh session per batch. GP test: 2 weeks, 5-10 GPs, ~25-50 dail
 
 ## Responsibilities Boundary
 **Agent:** evaluation, scoring, Supabase writes, TG replies, team alerts.
-**Cron jobs (separate):** FDV snapshots, points settlement, retroactive upgrades, daily digest, traction alerts.
+**Cron jobs (S0):** daily-digest only. See `docs/future-ideas.md` for cut crons.
 
 ## Memory
-All evaluation state → Supabase. MEMORY.md doesn't load in group chats. Daily notes for self-calibration only. See MEMORY.md for index.
+All evaluation state → Supabase (`scout_submissions`, `projects`, `scout_points`). MEMORY.md doesn't load in group chats. Daily notes for self-calibration observations only.
 
 ---
 

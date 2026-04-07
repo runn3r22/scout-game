@@ -25,25 +25,11 @@
 
   "cron": [
     {
-      "id": "fdv-snapshot",
-      "schedule": "0 0 * * *",
-      "sessionTarget": "isolated",
-      "model": "claude-sonnet-4-20250514",
-      "task": "Pull current FDV for all SIGNAL/TRADE tokens from GeckoTerminal and update token_performance table in Supabase. Calculate 1d/7d/14d performance vs signal-time FDV."
-    },
-    {
       "id": "daily-digest",
       "schedule": "0 1 * * *",
       "sessionTarget": "isolated",
       "model": "claude-sonnet-4-20250514",
-      "task": "Compile daily digest: today's evaluations summary, acceptance rate, notable scores, points settlement. Post to team review channel."
-    },
-    {
-      "id": "retroactive-upgrade",
-      "schedule": "0 2 * * *",
-      "sessionTarget": "isolated",
-      "model": "claude-sonnet-4-20250514",
-      "task": "Check all DB_SAVE tokens from last 14 days against any SIGNAL/TRADE actions from any pipeline. If match found, retroactively upgrade original scout points and log to digest."
+      "task": "Compile daily digest from Supabase scout_submissions: total evaluations today, breakdown by action (REJECT/DB_SAVE/SIGNAL/TRADE), acceptance rate, top scores with reasoning, top scouts by points. Post to team review channel."
     }
   ]
 }
