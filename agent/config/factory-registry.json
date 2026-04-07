@@ -1,60 +1,146 @@
 {
-  "_comment": "Token factory registry — maps deployer contract patterns to factory names. Add new launchpads by adding entries here.",
-  "_updated": "2026-03-17",
+  "_comment": "Token factory registry — Base mainnet (chain id 8453). Maps deployer / factory / router / fee-wallet addresses to launchpads. Read by Judgement Agent in Step 1 for factory detection. Unknown → UNVERIFIED_LAUNCH.",
+  "_updated": "2026-04-07",
+  "_chain": "base",
+  "_chain_id": 8453,
+  "_detection_priority": "1) Match token deployer / factory address against factories[].deployer_addresses. 2) For Bankr/Noice (no own factory): match fee_wallet as beneficiary in Doppler Lock event data, OR Bankr router as fn_caller on Clanker. 3) Unknown → UNVERIFIED_LAUNCH.",
+
   "factories": [
     {
       "name": "clanker",
-      "display_name": "Clanker",
+      "display_name": "Clanker V4",
       "chain": "base",
-      "deployer_addresses": [],
+      "deployer_addresses": [
+        "0xE85A59c628F7d27878ACeB4bf3b35733630083a9"
+      ],
+      "addresses": {
+        "factory": "0xE85A59c628F7d27878ACeB4bf3b35733630083a9",
+        "fee_locker": "0xf3622742B1E446D92E45e22923ef11C2fcd55D68",
+        "vault": "0x8E845EaD15737BF71904a30BdDD3aeE76d6adf6c",
+        "sniper_auction": "0xFdc013ce003980889cFfd66b0c8329545ae1d1E8"
+      },
       "has_fee_mechanism": true,
       "fee_check_method": "clanker_api",
-      "notes": "Check factory_fees_claimed. Claimed = active creator. Unclaimed >7d = possible bot/abandoned."
+      "notes": "Check factory_fees_claimed via Clanker API. Claimed = active creator. Unclaimed >7d = possible bot/abandoned."
     },
+
     {
       "name": "bankr",
       "display_name": "Bankr",
       "chain": "base",
       "deployer_addresses": [],
+      "no_own_factory": true,
+      "platform_history": "Pre-2026-02-10: built on top of Clanker V4. Post-2026-02-10: built on top of Doppler.",
+      "addresses": {
+        "router": "0x2112b8456AC07c15fA31ddf3Bf713E77716fF3F9",
+        "fee_wallet": "0xF60633D02690e2A15A54AB919925F3d038Df163e"
+      },
+      "detection_method": "Bankr router (0x2112...3F9) as fn_caller on Clanker, OR Bankr fee_wallet (0xF606...163e) as beneficiary in Doppler Lock event data.",
       "has_fee_mechanism": false,
       "fee_check_method": null,
-      "notes": "Context only. No fee mechanism to check."
+      "notes": "No own factory contract. Identifies via router (Clanker era) or fee-wallet beneficiary (Doppler era)."
     },
+
     {
-      "name": "flaunch",
-      "display_name": "Flaunch",
+      "name": "doppler",
+      "display_name": "Doppler Protocol",
       "chain": "base",
-      "deployer_addresses": [],
+      "deployer_addresses": [
+        "0x4225C632B62622bD7B0a3ec9745c0a866Ff94f6F",
+        "0xf0B5141Dd9096254B2cA624Dff26024F46087229"
+      ],
+      "addresses": {
+        "airlock": "0x660eAaEdEBc968f8f3694354FA8EC0b4c5Ba8D12",
+        "token_factories": {
+          "default": "0x4225C632B62622bD7B0a3ec9745c0a866Ff94f6F",
+          "v80":     "0xf0B5141Dd9096254B2cA624Dff26024F46087229"
+        },
+        "initialisers": {
+          "decay_multicurve":             "0xD59cE43E53D69F190E15d9822Fb4540dCcc91178",
+          "decay_multicurve_hook":        "0xBb7784a4d481184283ED89619a3E3eD143E1Adc0",
+          "lockable_uni_v3":              "0xe0DC4012ac9c868f09C6e4b20D66Ed46D6F258d0",
+          "uni_v3":                       "0xaA47D2977d622DBdFD33eeF6a8276727c52EB4e5",
+          "uni_v4":                       "0x53b4C21a6cb61d64f636aBbFA6E8e90E6558E8aD",
+          "uni_v4_multicurve":            "0x65DE470Da664A5be139A5D812bE5FDa0d76CC951",
+          "uni_v4_multicurve_hook":       "0x892D3C2b4ABEAaf67d52a7B29783e2161B7cAd40",
+          "uni_v4_sched_multicurve":      "0xA36715dA46Ddf4A769f3290f49AF58bF8132ED8E",
+          "uni_v4_sched_multicurve_hook": "0x3E342A06F9592459D75721d6956b570F02eF2dc0"
+        },
+        "migrators": {
+          "uni_v2":      "0x5F3bA43D44375286296Cb85F1EA2EBfa25dde731",
+          "uni_v4":      "0xd3b4Cf7FD24381e90a4F012Fc6C5976b87b9B3Ce",
+          "uni_v4_hook": "0xd6fEcFF347c6203a41874E8d77dE669B54e7A500"
+        },
+        "governance": {
+          "factory":           "0xa82C66b6dDEB92089015C3565E05B5c9750b2d4b",
+          "launchpad_factory": "0x40bcB4dDA3BcF7DBa30C5D10C31eE2791ED9DdCa",
+          "noop_factory":      "0x3aD727Ee0FbbB8eE0920933FDB96f23fD56F1299"
+        }
+      },
       "has_fee_mechanism": false,
       "fee_check_method": null,
-      "notes": "Flaunch token factory on Base."
+      "notes": "Underlying protocol used by Bankr (post-2026-02-10) and Noice. Different initialisers correspond to different curve/pool types. To disambiguate downstream platform (raw Doppler vs Bankr vs Noice), inspect beneficiary in Lock event."
     },
-    {
-      "name": "virtuals",
-      "display_name": "Virtuals Protocol",
-      "chain": "base",
-      "deployer_addresses": [],
-      "has_fee_mechanism": false,
-      "fee_check_method": null,
-      "notes": "AI agent token factory. Bonding curve launch mechanic."
-    },
+
     {
       "name": "noice",
       "display_name": "Noice",
       "chain": "base",
       "deployer_addresses": [],
+      "no_own_factory": true,
+      "uses": "doppler",
+      "addresses": {
+        "fee_wallet": "0xfbDbDfb784De5d94c04E8c3B47435ae17b241CdF"
+      },
+      "detection_method": "Match Noice fee_wallet (0xfbDb...1CdF) as beneficiary in Doppler Lock event data.",
       "has_fee_mechanism": false,
       "fee_check_method": null,
-      "notes": "Noice launchpad on Base."
+      "notes": "No own factory. Sits on top of Doppler initialisers. Identifies via fee-wallet beneficiary."
     },
+
     {
-      "name": "creator_bid",
-      "display_name": "Creator Bid (Aerodrome)",
+      "name": "flaunch",
+      "display_name": "Flaunch",
       "chain": "base",
-      "deployer_addresses": [],
+      "deployer_addresses": [
+        "0x51bba15255406cfe7099a42183302640ba7dafdc",
+        "0xf785bb58059fab6fb19bdda2cb9078d9e546efdc",
+        "0x23321f11a6d44fd1ab790044fdfde5758c902fdc",
+        "0x8dc3b85e1dc1c846ebf3971179a751896842e5dc"
+      ],
+      "addresses": {
+        "position_managers": {
+          "v1_0":   "0x51bba15255406cfe7099a42183302640ba7dafdc",
+          "v1_1":   "0xf785bb58059fab6fb19bdda2cb9078d9e546efdc",
+          "v1_3":   "0x23321f11a6d44fd1ab790044fdfde5758c902fdc",
+          "any_v2": "0x8dc3b85e1dc1c846ebf3971179a751896842e5dc"
+        }
+      },
+      "_pool_counts_as_of_2026_04_07": {
+        "v1_0":   4762,
+        "v1_1":   30088,
+        "v1_3":   64872,
+        "any_v2": 1537
+      },
+      "detection_method": "Uniswap V4 PositionManager hooks. fn_caller = tx_signer = evt_tx_from in *_evt_poolcreated. No router intermediary.",
       "has_fee_mechanism": false,
       "fee_check_method": null,
-      "notes": "Aerodrome-based token creation. Check LP structure."
+      "notes": "Multiple PositionManager versions active simultaneously — match any. Pool counts are point-in-time; addresses are stable."
+    },
+
+    {
+      "name": "virtuals",
+      "display_name": "Virtuals Protocol",
+      "chain": "base",
+      "deployer_addresses": [
+        "0xc3538DdD84619e761b4c03cAf2F785f79889958d"
+      ],
+      "addresses": {
+        "unicorn_factory": "0xc3538DdD84619e761b4c03cAf2F785f79889958d"
+      },
+      "has_fee_mechanism": false,
+      "fee_check_method": null,
+      "notes": "AI agent token factory. EIP-1967 proxy → BondingV2 implementation. Bonding curve launch mechanic."
     }
   ]
 }

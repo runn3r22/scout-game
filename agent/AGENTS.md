@@ -45,7 +45,9 @@ Run steps in order. Exit early on rejection. **If Supabase available:** write re
 | Duplicate CA in 24h, no new info | `DUPLICATE` |
 | Banned | `BANNED` |
 
-**Factory detection:** Read `config/factory-registry.json` via tool call. Unknown → `UNVERIFIED_LAUNCH`.
+**Factory detection:** Read `config/factory-registry.json` via tool call. Match the token's deployer/factory address against `factories[].deployer_addresses`. Unknown → `UNVERIFIED_LAUNCH`.
+
+**Bankr / Noice edge case.** Both sit on top of Doppler and have no own factory (`no_own_factory: true` in registry). A token launched via Bankr or Noice will match as `doppler` in Step 1 — that is correct and expected. Do NOT flag as `UNVERIFIED_LAUNCH`. If platform identity matters for builder/team analysis in Step 5, disambiguate by inspecting the beneficiary in the Doppler `Lock` event and matching against `bankr.addresses.fee_wallet` or `noice.addresses.fee_wallet`. For Bankr's pre-2026-02-10 Clanker era, match `bankr.addresses.router` as `fn_caller` on Clanker.
 
 ### Step 2: Thesis Quality Gate
 Score thesis 1-10. Gate at < 4 → `THESIS_WEAK`. Rubric: specificity, information edge, timing (FDV vs comps), on-chain insight (must name wallets/txs), builder mention, narrative fit.
