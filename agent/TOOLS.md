@@ -21,11 +21,11 @@ S0 GP test uses an isolated test Supabase project (separate from main Fair infra
 Three tables:
 
 **`scout_submissions`** — every submission attempt
-- Step 1 INSERT: id, scout_id, scout_handle, ca, source_message, submitted_at, status='pending'
+- Step 1 INSERT: id, scout_id, scout_handle, source_chat_id, source_message_id, source_message, ca, submitted_at, status='pending'
 - Step 3 UPDATE: snapshot_json
 - Step 6 UPDATE: thesis_score, token_score, final_score, modifiers_json, action, reasoning, points_awarded, evaluated_at, status='done'
 - On reject: status='done', reject_code='...'
-- **Always write receipt at Step 1** — compaction protection
+- **Always write receipt at Step 1** — compaction protection. source_chat_id + source_message_id are required at Step 1 because Step 6 uses them to reply to the original message after potential compaction has dropped chat history from context.
 
 **`projects`** — one row per unique CA
 - Step 4 SELECT by ca: dedup + read existing notes

@@ -32,7 +32,7 @@ Credentials provided via env vars `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`. Use
 
 ## Evaluation Pipeline
 
-Run steps in order. Exit early on rejection. **Write receipt at Step 1** to `scout_submissions` (id, scout_id, scout_handle, ca, submitted_at, source_message, status='pending') — compaction protection.
+Run steps in order. Exit early on rejection. **Write receipt at Step 1** to `scout_submissions` (id, scout_id, scout_handle, source_chat_id, source_message_id, source_message, ca, submitted_at, status='pending') — compaction protection. The chat_id + message_id pair is what Step 6 uses to reply to the original submission, so it MUST be persisted at Step 1 before any LLM-heavy work.
 
 ### Step 1: Structural Filter
 | Condition | Code |
