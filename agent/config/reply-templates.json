@@ -7,7 +7,6 @@
     "structural_not_trading": "[CA_SHORT] isn't showing active trading. verify the address.",
     "structural_out_of_range": "[TICKER] is outside our evaluation range.",
     "structural_too_old": "[TICKER] is outside our evaluation range.",
-    "structural_rate_limit": "rate limit reached (5/day). back tomorrow.",
     "structural_duplicate": "[TICKER] already submitted today.",
     "structural_banned": null,
     "reject": "evaluated [TICKER]. doesn't meet our threshold.",

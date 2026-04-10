@@ -90,7 +90,7 @@ Flag timing concern only if current FDV is already within 30% of the comparable 
 
 ## Token Factory — `snapshot.token_factory` + `snapshot.factory_fees_claimed`
 
-Token factory is detected via `factory-registry.json` config file. Known factories: Clanker, Bankr, Flaunch, Virtuals, Noice, Creator Bid (Aerodrome). New launchpads are added by updating the config — no code changes needed.
+Token factory is detected via `factory-registry.json` config file. Known factories: Clanker, Bankr, Doppler, Noice, Flaunch, Virtuals. New launchpads are added by updating the config — no code changes needed.
 
 If `token_factory` matches a known factory: this is a known Base launch mechanic. Not inherently bullish or bearish — plenty of legitimate tokens launch this way, and plenty of bots do too.
 
@@ -102,8 +102,8 @@ If `token_factory` matches a known factory: this is a known Base launch mechanic
 | Fees unclaimed + `age_days` >= 7 | Possible bot launch, abandoned project, or absent founder. Flag `CLANKER_FEES_UNCLAIMED`. Reduce Dimension 1 by 0.5 unless scout provides direct evidence founder is active. |
 | Fees unclaimed + `age_days` < 1 | Too early to be meaningful. Ignore. Don't penalize. |
 
-### Bankr tokens
-Note as context only. No fee mechanism to check.
+### Doppler / Bankr / Noice tokens
+No fee-claim mechanism. Treat as context only. Bankr and Noice match as `doppler` in detection (they have no own factory) — that is correct and NOT a red flag. If you need to know which downstream platform launched it for builder analysis, inspect Lock event beneficiary against fee_wallet addresses in `factory-registry.json`.
 
 ### `token_factory = "unknown"` → `UNVERIFIED_LAUNCH`
 
@@ -125,23 +125,4 @@ When the deployer address doesn't match any known factory in `factory-registry.j
 
 ---
 
-## Multi-Scout Convergence — `db.previous_submissions`
-
-If 2+ other scouts submitted this same CA before this evaluation, read their submissions.
-
-### Organic convergence (positive signal)
-- Submissions spread > 30 min apart
-- Different thesis angles, different discovery contexts
-- Flag `MULTI_SCOUT_CONVERGENCE`
-- Apply +0.3 per additional organic submission to final score (max +0.6 total)
-
-### Coordinated push (negative signal)
-- >= 3 submissions within 15 min
-- Similar language, same or related wallets
-- Flag `COORDINATED_PUSH`
-- Apply -1.0 modifier
-
-### Ambiguous (15-30 min gap, different theses)
-- Treat as organic, apply +0.2
-
-**Key discriminator:** thesis language. Identical framing = coordinated. Independent framing = organic.
+*Multi-scout convergence and coordinated-push detection are cut from S0 (closed group of 10 known GPs makes both signals statistically meaningless). See `docs/future-ideas.md` → S0 Simplification Log for restore instructions.*

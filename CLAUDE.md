@@ -1,5 +1,29 @@
 # Scout Game — Project Context
 
+## Change Tracking Rules (READ FIRST)
+
+**Whenever you cut, simplify, stub, or remove a feature from any runtime file** (anything under `agent/`, `src/`, `supabase/`, or `config/`), you MUST add an entry to `docs/future-ideas.md` → "S0 Simplification Log" section in the **same edit batch**.
+
+The log entry must contain:
+1. **Feature name** — one line, the concept being cut
+2. **What was removed** — one line, concrete behavior
+3. **File + section/line** where it lived (precise enough to find it again)
+4. **Restore action** — exact instructions to bring it back ("re-add X to file Y in section Z")
+
+This is **non-negotiable**. If Vasya asks to "remove X" / "cut X" / "drop X" / "skip X" / "we won't do X in MVP" and X touches a runtime file, the simplification log entry is part of the same task. Never finish a cut without logging it. Never batch multiple cuts and forget to log some.
+
+**Why:** Vasya needs to read the log at the start of S1 and methodically restore everything. If we forget to log a cut, that feature dies silently. The log is the only safety net against scope amnesia.
+
+**Format example** (already in `docs/future-ideas.md`):
+```
+- **COORDINATED modifier (-1.0)** — removed from S0 active modifier list. Was about coordinated push detection (≥3 wallets submit same CA in 15 min). Cut because GP test has 10 known scouts.
+  - File: `agent/AGENTS.md` — "Modifiers (S0 active)" line. To restore: re-add `COORDINATED (-1.0)` to that list AND flip the phase note in `agent/skills/anti-gaming/SKILL.md`.
+```
+
+If you see a feature being cut and you're unsure whether it counts as "runtime", err on the side of logging it. Over-logging is harmless. Under-logging is permanent loss.
+
+---
+
 ## What This Is
 
 You are building the Scout Game for Fair (formerly FAIRCASTER) — an autonomous VC fund operating as a multi-agent system on Base blockchain. The scout game is a gamified alpha sourcing mechanic where community members ("scouts") tag `@fairvc` on X/Twitter with token signals, and Fair's AI Judgement Agent evaluates, scores, and acts on them.

@@ -46,6 +46,38 @@
 
 ---
 
+## S0 Simplification Log (code-level, surgical)
+
+**Read this before starting S1.** Every entry here is a feature that was deliberately removed or stubbed from runtime files for the GP test. Each entry tells you exactly which file to touch to bring it back. When S1 starts: walk this list top-to-bottom, restore each item, then read the conceptual sections below for context.
+
+**Format:** `Feature` — `what was cut` — `file:context` — `restore action`.
+
+### 2026-04-07 cuts
+
+- **`COORDINATED` modifier (-1.0)** — removed from S0 active modifier list. Was about coordinated push detection (≥3 wallets submit same CA in 15 min). Cut because GP test has 10 known scouts so coordination is impossible.
+  - File: `agent/AGENTS.md` — "Modifiers (S0 active)" line. To restore: re-add `COORDINATED (-1.0)` to that list AND flip the phase note in `agent/skills/anti-gaming/SKILL.md` (remove the "DISABLED in S0" sentence).
+- **Submission rate limit (5/scout/day)** — fully removed. No rate-limit logic anywhere in pipeline. Was: scout exceeds 5 submissions/day → `RATE_LIMIT` reject.
+  - File: `agent/config/reply-templates.json` — `gp_test.structural_rate_limit` template was deleted. To restore: re-add the template, re-add `RATE_LIMIT` reject_code in `agent/AGENTS.md` Step 1, add a count check against `scout_points.submission_count` for current day.
+- **Tier system rule** — `SOUL.md` line "Tier ≠ score" was removed (no tiers in S0, all GPs treated equally). To restore: re-add the rule under "Hard Rules" in `agent/SOUL.md` and bring back tier multipliers in `agent/skills/evaluation-output/SKILL.md` per CLAUDE.md "Points Per Action" table.
+- **Multi-scout convergence modifier (`MULTI_SCOUT_CONVERGENCE` +0.3 organic / +0.6 max)** — removed from `agent/skills/snapshot-interpretation/SKILL.md`. Was a whole section reading `db.previous_submissions` and applying organic-vs-coordinated bonus/penalty. Cut for same reason as COORDINATED — no statistical signal at 10 scouts.
+  - File: `agent/skills/snapshot-interpretation/SKILL.md` — "Multi-Scout Convergence" section was deleted. To restore: paste back the section AND wire `db.previous_submissions` into Step 4 query in `agent/AGENTS.md`.
+- **Creator Bid factory** — fully purged from `factory-registry.json`, `TOOLS.md`, and `snapshot-interpretation/SKILL.md`. Confirmed not relevant to Fair (Vasya 2026-04-07: "useless shit"). **Do NOT restore in S1.** Listed here only so we don't accidentally re-add it during S1 sweep.
+- **Calibration examples** — `agent/skills/calibration-examples/SKILL.md` exists as placeholder, all 5 example slots are `_To be filled by Vasya._`. **Action item for Vasya:** populate before smoke test. Format: `Submission text / Context / Expected outcome / Why this score / Common failure mode`.
+- **SOUL.md duplicate follow-up rules** — two separate lines saying the same thing ("Ignore follow-up replies" and "One evaluation per submission. No re-evaluation on follow-up.") were collapsed into one. Pure dedupe, no behavior change. **Do NOT restore** — this is just cleanup.
+- **SOUL.md "Never compose public-facing content" rule** — was: blanket ban on public output. Now reads: ban on freeform copy, but **templated Telegram replies from `config/reply-templates.json` are allowed**. Cut reason: in S0 the Judgement Agent IS the one sending replies to scouts (no Comms Agent in the loop yet). To restore S1 behavior: when Comms Agent comes online and starts handling external posts, tighten this rule back to "produce structured `signal_brief` JSON only, never any user-facing text". File: `agent/SOUL.md` Hard Rules section.
+
+### How to use the simplification log
+
+When you (Claude) cut a feature from current scope to simplify testing, add an entry here with:
+1. What was cut (1 line)
+2. Why (1 line)
+3. Exact file + section/line where it used to live
+4. Restore action (precise: "re-add X to file Y in section Z")
+
+When Vasya says "we're starting S1, check the log" — read this section top-to-bottom and restore each entry methodically. Pair with the conceptual sections below for context.
+
+---
+
 ## Saved from 2026-04-07 GP test scoping session
 
 The GP test (S0) is intentionally a stripped-down version to validate the core mechanic: submission → evaluation → scoring → DB write → reply. Everything below was deliberately cut from S0 and must come back before S1.
